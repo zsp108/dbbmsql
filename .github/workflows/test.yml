@@ -1,0 +1,37 @@
+name: Go
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 🔹 确保 Git 历史完整
+
+    - name: Fix HEAD issue
+      run: git checkout $(git rev-parse HEAD)  # 🔹 确保 HEAD 有效
+  
+    - name: Fetch all branches
+      run: git fetch --prune  # ✅ 移除 --unshallow，避免错误
+    
+    - name: gitlint
+      run: make gitlint
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 🔹 确保 Git 历史完整
+
+
+
+    - name: Build
+      run: go version

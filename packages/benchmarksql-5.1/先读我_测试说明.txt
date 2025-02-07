@@ -1,0 +1,68 @@
+【使用BenchmarkSQL来压测OceanBase的测试步骤】
+
+步骤1）解压 benchmarksql-5.0.zip 后，进入到 benchmarksql-5.0/dist 目录：
+[root@localhost dist]# mv BenchmarkSQL-5.0.jar BenchmarkSQL-5.0.jar.orig
+如果是压测MySQL模式租户：
+[root@localhost dist]# ln -s ./BenchmarkSQL-5.0.jar.mysql BenchmarkSQL-5.0.jar
+如果是压测Oracle模式租户：
+[root@localhost dist]# ln -s ./BenchmarkSQL-5.0.jar.oracle BenchmarkSQL-5.0.jar
+
+
+步骤2）进入到 benchmarksql-5.0/run 目录后：
+[root@localhost run]# chmod a+x *.sh
+
+
+步骤3）登陆到 OCP Web 白屏界面或者使用 mysql/obclient 客户端工具黑屏连接到压测租户，创建用于BMSQL压测的相关数据库或用户：
+如果是压测MySQL模式租户：
+MySQL [(none)]> create database bmtest;
+如果是压测Oracle模式租户：
+obclient [SYS]> create user bmtest identified by "xxx";
+obclient [SYS]> grant connect,resource,dba to bmtest;
+
+
+步骤4）进入到 benchmarksql-5.0/run 目录后，直接编辑或者拷贝出一个新的xxx.prop文件，并根据当前压测集群的实际信息，修改如下几个配置参数：
+conn=jdbc:oceanbase://xxx.xxx.xxx.xxx:2883/bmtest?loadBalanceStrategy=RANDOM&rewriteBatchedStatements=true&allowMultiQueries=true&useLocalSessionState=true&useUnicode=true&characterEncoding=utf-8&socketTimeout=3000000
+user=bmtest@perforacle#obcluster_v421
+password=xxx
+database=bmtest
+cluster=obcluster_v421
+
+warehouses=10000
+loadWorkers=60
+terminals=2000
+
+runMins=15
+
+LoadStopW=10000
+
+
+【可选】步骤5）如果想得到一个最高的tpmC压测指标，可以联系OB技术支持人员或参考官网相关文档，对当前测试版本的OB数据库进行TPCC压测参数调优；如果只是想对OB数据库进行盲测，可以跳过这一步。
+
+
+步骤6）进入到 benchmarksql-5.0/run 目录后，执行导数操作：
+如果是压测MySQL模式租户：
+[root@localhost run]# date ; time ./runDatabaseBuild.sh xxx.prop ; date
+如果是压测Oracle模式租户：
+[root@localhost run]# date ; time ./runDatabaseBuildOracle.sh xxx.prop ; date
+
+
+步骤7）登陆到 OCP Web 白屏界面或者使用 mysql/obclient 客户端工具黑屏连接到压测租户，发起合并操作，并等待合并结束。
+
+
+步骤8）使用 mysql/obclient 客户端工具黑屏连接到压测租户，手工收集BMSQL的统计信息，并检查导数结果是否一致（是否存在漏仓）：
+obclient> call dbms_stats.gather_schema_stats('bmtest', degree=>128);
+如果是压测MySQL模式租户：
+MySQL [bmtest]> select TABLE_SCHEMA,TABLE_NAME,TABLE_ROWS from information_schema.tables where TABLE_SCHEMA like 'bmtest' order by TABLE_SCHEMA,table_rows desc;
+如果是压测Oracle模式租户：
+obclient [BMTEST]> select table_name,num_rows from user_tables;
+
+
+步骤9）进入到 benchmarksql-5.0/run 目录后，执行压测操作：
+[root@localhost run]# date ; time ./runBenchmark.sh xxx.prop ; date
+
+
+【可选】步骤10）压测结束后，进入到 benchmarksql-5.0/run 目录后，执行清理操作：
+如果是压测MySQL模式租户：
+[root@localhost run]# date ; ./runDatabaseDestroy.sh xxx.prop ; date
+如果是压测Oracle模式租户：
+[root@localhost run]# date ; ./runDatabaseDestroyOracle.sh xxx.prop ; date

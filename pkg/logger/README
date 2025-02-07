@@ -1,0 +1,10 @@
+```go
+// 创建 Logger 实例，设为 DEBUG 级别，输出格式为 JSON，日志保存到文件 "app.log"
+log := logger.NewLogger(logrus.DebugLevel, "text", "app.log")
+
+// 使用日志
+log.Debug("This is a debug message")
+log.Info("This is an info message")
+log.Warn("This is a warning message")
+log.Error("This is an error message")
+```

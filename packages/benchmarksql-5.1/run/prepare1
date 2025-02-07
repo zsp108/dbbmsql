@@ -1,0 +1,4422 @@
+nohup: ignoring input
++ '[' 2 -ne 2 ']'
++ source ./funcs.sh perforacle.prop
+++ PROPS=perforacle.prop
+++ '[' '!' -f perforacle.prop ']'
+++ case "$(getProp db)" in
++++ getProp db
++++ grep '^db=' perforacle.prop
++++ sed -e 's/^db=//'
++ echo tableCreates
++ grep -q -e '\.sql$'
++ ENDS_WITH_SQL=0
++ '[' -f tableCreates -a 0 -eq 1 ']'
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ '[' -f ./sql.oracle/tableCreates.sql ']'
++ SQL_FILE=./sql.common/tableCreates.sql
++ '[' '!' -f ./sql.common/tableCreates.sql ']'
++ setCP
++ case "$(getProp db)" in
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ cp='../lib/oracle/*'
++ '[' '!' -z '' -a -d /lib ']'
++ cp='../lib/oracle/*:../lib/*'
++ myCP='.:../lib/oracle/*:../lib/*:../dist/*'
++ export myCP
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ echo '# Loading SQL file ./sql.common/tableCreates.sql'
+# Loading SQL file ./sql.common/tableCreates.sql
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ myOPTS=-Dprop=perforacle.prop
++ myOPTS='-Dprop=perforacle.prop -DcommandFile=./sql.common/tableCreates.sql'
++ echo '.:../lib/oracle/*:../lib/*:../dist/*'
+.:../lib/oracle/*:../lib/*:../dist/*
++ echo -Dprop=perforacle.prop -DcommandFile=./sql.common/tableCreates.sql
+-Dprop=perforacle.prop -DcommandFile=./sql.common/tableCreates.sql
++ java -cp '.:../lib/oracle/*:../lib/*:../dist/*' -Dprop=perforacle.prop -DcommandFile=./sql.common/tableCreates.sql ExecJDBC
+create table bmsql_config (
+cfg_name    varchar2(30) primary key,
+cfg_value   varchar2(50)
+);
+create tablegroup "tpcc_group" binding true partition by hash partitions 180;
+create table bmsql_warehouse (
+w_id        integer   not null,
+w_ytd       decimal(12,2),
+w_tax       decimal(4,4),
+w_name      varchar2(10),
+w_street_1  varchar2(20),
+w_street_2  varchar2(20),
+w_city      varchar2(20),
+w_state     char(2),
+w_zip       char(9),
+primary key(w_id)
+)tablegroup='tpcc_group' partition by hash(w_id) partitions 180;
+create table bmsql_district (
+d_w_id       integer       not null,
+d_id         integer       not null,
+d_ytd        decimal(12,2),
+d_tax        decimal(4,4),
+d_next_o_id  integer,
+d_name       varchar2(10),
+d_street_1   varchar2(20),
+d_street_2   varchar2(20),
+d_city       varchar2(20),
+d_state      char(2),
+d_zip        char(9),
+PRIMARY KEY (d_w_id, d_id)
+)tablegroup='tpcc_group' partition by hash(d_w_id) partitions 180;
+create table bmsql_customer (
+c_w_id         integer        not null,
+c_d_id         integer        not null,
+c_id           integer        not null,
+c_discount     decimal(4,4),
+c_credit       char(2),
+c_last         varchar2(16),
+c_first        varchar2(16),
+c_credit_lim   decimal(12,2),
+c_balance      decimal(12,2),
+c_ytd_payment  decimal(12,2),
+c_payment_cnt  integer,
+c_delivery_cnt integer,
+c_street_1     varchar2(20),
+c_street_2     varchar2(20),
+c_city         varchar2(20),
+c_state        char(2),
+c_zip          char(9),
+c_phone        char(16),
+c_since        timestamp,
+c_middle       char(2),
+c_data         varchar2(500),
+PRIMARY KEY (c_w_id, c_d_id, c_id)
+)tablegroup='tpcc_group' partition by hash(c_w_id) partitions 180;
+create sequence bmsql_hist_id_seq;
+create table bmsql_history (
+hist_id  integer,
+h_c_id   integer,
+h_c_d_id integer,
+h_c_w_id integer,
+h_d_id   integer,
+h_w_id   integer,
+h_date   timestamp,
+h_amount decimal(6,2),
+h_data   varchar2(24)
+)tablegroup='tpcc_group' partition by hash(h_w_id) partitions 180;
+create table bmsql_new_order (
+no_w_id  integer   not null ,
+no_d_id  integer   not null,
+no_o_id  integer   not null,
+PRIMARY KEY (no_w_id, no_d_id, no_o_id)
+)tablegroup='tpcc_group' partition by hash(no_w_id) partitions 180;
+create table bmsql_oorder (
+o_w_id       integer      not null,
+o_d_id       integer      not null,
+o_id         integer      not null,
+o_c_id       integer,
+o_carrier_id integer,
+o_ol_cnt     integer,
+o_all_local  integer,
+o_entry_d    timestamp,
+PRIMARY KEY (o_w_id, o_d_id, o_id)
+)tablegroup='tpcc_group' partition by hash(o_w_id) partitions 180;
+create table bmsql_order_line (
+ol_w_id         integer   not null,
+ol_d_id         integer   not null,
+ol_o_id         integer   not null,
+ol_number       integer   not null,
+ol_i_id         integer   not null,
+ol_delivery_d   timestamp,
+ol_amount       decimal(6,2),
+ol_supply_w_id  integer,
+ol_quantity     integer,
+ol_dist_info    char(24),
+PRIMARY KEY (ol_w_id, ol_d_id, ol_o_id, ol_number)
+)tablegroup='tpcc_group' partition by hash(ol_w_id) partitions 180;
+create table bmsql_item (
+i_id     integer      not null,
+i_name   varchar2(24),
+i_price  decimal(5,2),
+i_data   varchar2(50),
+i_im_id  integer,
+PRIMARY KEY (i_id)
+)locality='F,R{all_server}@zone1, F,R{all_server}@zone2, F,R{all_server}@zone3' primary_zone='zone1'  duplicate_scope='cluster';
+create table bmsql_stock (
+s_w_id       integer       not null,
+s_i_id       integer       not null,
+s_quantity   integer,
+s_ytd        integer,
+s_order_cnt  integer,
+s_remote_cnt integer,
+s_data       varchar2(50),
+s_dist_01    char(24),
+s_dist_02    char(24),
+s_dist_03    char(24),
+s_dist_04    char(24),
+s_dist_05    char(24),
+s_dist_06    char(24),
+s_dist_07    char(24),
+s_dist_08    char(24),
+s_dist_09    char(24),
+s_dist_10    char(24),
+PRIMARY KEY (s_w_id, s_i_id)
+)tablegroup='tpcc_group' partition by hash(s_w_id) partitions 180;
+Tables have been created.
++ '[' 1 -lt 1 ']'
++ source ./funcs.sh perforacle.prop
+++ PROPS=perforacle.prop
+++ '[' '!' -f perforacle.prop ']'
+++ case "$(getProp db)" in
++++ getProp db
++++ grep '^db=' perforacle.prop
++++ sed -e 's/^db=//'
++ shift
++ setCP
++ case "$(getProp db)" in
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ cp='../lib/oracle/*'
++ '[' '!' -z '' -a -d /lib ']'
++ cp='../lib/oracle/*:../lib/*'
++ myCP='.:../lib/oracle/*:../lib/*:../dist/*'
++ export myCP
++ java -cp '.:../lib/oracle/*:../lib/*:../dist/*' -Dprop=perforacle.prop LoadData
+Starting BenchmarkSQL LoadData
+
+driver=com.alipay.oceanbase.obproxy.mysql.jdbc.Driver
+conn=jdbc:oceanbase://172.18.2.36:2883/bmtest?rewriteBatchedStatements=true&allowMultiQueries=true&useLocalSessionState=true&useUnicode=true&characterEncoding=utf-8&socketTimeout=3000000
+user=bmtest@perforacle#oio_cluster
+password=***********
+warehouses=2000
+loadWorkers=60
+fileLocation (not defined)
+csvNullValue (not defined - using default 'NULL')
+LoadStartW=1
+LoadStopW=2000
+
+Worker 000: Loading ITEM
+Worker 001: Loading Warehouse      1
+Worker 002: Loading Warehouse      2
+Worker 003: Loading Warehouse      3
+Worker 004: Loading Warehouse      4
+Worker 005: Loading Warehouse      5
+Worker 006: Loading Warehouse      6
+Worker 007: Loading Warehouse      7
+Worker 008: Loading Warehouse      8
+Worker 009: Loading Warehouse      9
+Worker 010: Loading Warehouse     10
+Worker 011: Loading Warehouse     11
+Worker 012: Loading Warehouse     12
+Worker 013: Loading Warehouse     13
+Worker 014: Loading Warehouse     14
+Worker 015: Loading Warehouse     15
+Worker 016: Loading Warehouse     16
+Worker 017: Loading Warehouse     17
+Worker 018: Loading Warehouse     18
+Worker 019: Loading Warehouse     19
+Worker 020: Loading Warehouse     20
+Worker 021: Loading Warehouse     21
+Worker 022: Loading Warehouse     22
+Worker 023: Loading Warehouse     23
+Worker 024: Loading Warehouse     24
+Worker 025: Loading Warehouse     25
+Worker 026: Loading Warehouse     26
+Worker 027: Loading Warehouse     27
+Worker 028: Loading Warehouse     28
+Worker 029: Loading Warehouse     29
+Worker 030: Loading Warehouse     30
+Worker 031: Loading Warehouse     31
+Worker 032: Loading Warehouse     32
+Worker 033: Loading Warehouse     33
+Worker 034: Loading Warehouse     34
+Worker 035: Loading Warehouse     35
+Worker 036: Loading Warehouse     36
+Worker 037: Loading Warehouse     37
+Worker 038: Loading Warehouse     38
+Worker 039: Loading Warehouse     39
+Worker 040: Loading Warehouse     40
+Worker 041: Loading Warehouse     41
+Worker 042: Loading Warehouse     42
+Worker 043: Loading Warehouse     43
+Worker 044: Loading Warehouse     44
+Worker 045: Loading Warehouse     45
+Worker 046: Loading Warehouse     46
+Worker 047: Loading Warehouse     47
+Worker 048: Loading Warehouse     48
+Worker 049: Loading Warehouse     49
+Worker 050: Loading Warehouse     50
+Worker 051: Loading Warehouse     51
+Worker 052: Loading Warehouse     52
+Worker 053: Loading Warehouse     53
+Worker 054: Loading Warehouse     54
+Worker 055: Loading Warehouse     55
+Worker 056: Loading Warehouse     56
+Worker 057: Loading Warehouse     57
+Worker 058: Loading Warehouse     58
+Worker 059: Loading Warehouse     59
+Worker 000: Loading ITEM done
+Worker 000: Loading Warehouse     60
+Worker 024: Loading Warehouse     24 done
+Worker 024: Loading Warehouse     61
+Worker 011: Loading Warehouse     11 done
+Worker 011: Loading Warehouse     62
+Worker 006: Loading Warehouse      6 done
+Worker 006: Loading Warehouse     63
+Worker 002: Loading Warehouse      2 done
+Worker 002: Loading Warehouse     64
+Worker 003: Loading Warehouse      3 done
+Worker 003: Loading Warehouse     65
+Worker 014: Loading Warehouse     14 done
+Worker 014: Loading Warehouse     66
+Worker 005: Loading Warehouse      5 done
+Worker 005: Loading Warehouse     67
+Worker 028: Loading Warehouse     28 done
+Worker 028: Loading Warehouse     68
+Worker 012: Loading Warehouse     12 done
+Worker 012: Loading Warehouse     69
+Worker 029: Loading Warehouse     29 done
+Worker 029: Loading Warehouse     70
+Worker 031: Loading Warehouse     31 done
+Worker 031: Loading Warehouse     71
+Worker 007: Loading Warehouse      7 done
+Worker 007: Loading Warehouse     72
+Worker 015: Loading Warehouse     15 done
+Worker 015: Loading Warehouse     73
+Worker 020: Loading Warehouse     20 done
+Worker 020: Loading Warehouse     74
+Worker 043: Loading Warehouse     43 done
+Worker 043: Loading Warehouse     75
+Worker 027: Loading Warehouse     27 done
+Worker 027: Loading Warehouse     76
+Worker 042: Loading Warehouse     42 done
+Worker 042: Loading Warehouse     77
+Worker 009: Loading Warehouse      9 done
+Worker 009: Loading Warehouse     78
+Worker 053: Loading Warehouse     53 done
+Worker 053: Loading Warehouse     79
+Worker 001: Loading Warehouse      1 done
+Worker 001: Loading Warehouse     80
+Worker 046: Loading Warehouse     46 done
+Worker 046: Loading Warehouse     81
+Worker 039: Loading Warehouse     39 done
+Worker 039: Loading Warehouse     82
+Worker 004: Loading Warehouse      4 done
+Worker 004: Loading Warehouse     83
+Worker 052: Loading Warehouse     52 done
+Worker 052: Loading Warehouse     84
+Worker 026: Loading Warehouse     26 done
+Worker 026: Loading Warehouse     85
+Worker 051: Loading Warehouse     51 done
+Worker 051: Loading Warehouse     86
+Worker 058: Loading Warehouse     58 done
+Worker 058: Loading Warehouse     87
+Worker 030: Loading Warehouse     30 done
+Worker 030: Loading Warehouse     88
+Worker 017: Loading Warehouse     17 done
+Worker 017: Loading Warehouse     89
+Worker 054: Loading Warehouse     54 done
+Worker 054: Loading Warehouse     90
+Worker 022: Loading Warehouse     22 done
+Worker 022: Loading Warehouse     91
+Worker 055: Loading Warehouse     55 done
+Worker 055: Loading Warehouse     92
+Worker 034: Loading Warehouse     34 done
+Worker 034: Loading Warehouse     93
+Worker 021: Loading Warehouse     21 done
+Worker 021: Loading Warehouse     94
+Worker 045: Loading Warehouse     45 done
+Worker 045: Loading Warehouse     95
+Worker 013: Loading Warehouse     13 done
+Worker 013: Loading Warehouse     96
+Worker 036: Loading Warehouse     36 done
+Worker 036: Loading Warehouse     97
+Worker 018: Loading Warehouse     18 done
+Worker 018: Loading Warehouse     98
+Worker 008: Loading Warehouse      8 done
+Worker 008: Loading Warehouse     99
+Worker 038: Loading Warehouse     38 done
+Worker 038: Loading Warehouse    100
+Worker 033: Loading Warehouse     33 done
+Worker 033: Loading Warehouse    101
+Worker 023: Loading Warehouse     23 done
+Worker 023: Loading Warehouse    102
+Worker 047: Loading Warehouse     47 done
+Worker 047: Loading Warehouse    103
+Worker 025: Loading Warehouse     25 done
+Worker 025: Loading Warehouse    104
+Worker 059: Loading Warehouse     59 done
+Worker 059: Loading Warehouse    105
+Worker 010: Loading Warehouse     10 done
+Worker 010: Loading Warehouse    106
+Worker 057: Loading Warehouse     57 done
+Worker 057: Loading Warehouse    107
+Worker 035: Loading Warehouse     35 done
+Worker 035: Loading Warehouse    108
+Worker 044: Loading Warehouse     44 done
+Worker 044: Loading Warehouse    109
+Worker 056: Loading Warehouse     56 done
+Worker 056: Loading Warehouse    110
+Worker 048: Loading Warehouse     48 done
+Worker 048: Loading Warehouse    111
+Worker 016: Loading Warehouse     16 done
+Worker 016: Loading Warehouse    112
+Worker 032: Loading Warehouse     32 done
+Worker 032: Loading Warehouse    113
+Worker 019: Loading Warehouse     19 done
+Worker 019: Loading Warehouse    114
+Worker 040: Loading Warehouse     40 done
+Worker 040: Loading Warehouse    115
+Worker 050: Loading Warehouse     50 done
+Worker 050: Loading Warehouse    116
+Worker 049: Loading Warehouse     49 done
+Worker 049: Loading Warehouse    117
+Worker 037: Loading Warehouse     37 done
+Worker 037: Loading Warehouse    118
+Worker 041: Loading Warehouse     41 done
+Worker 041: Loading Warehouse    119
+Worker 000: Loading Warehouse     60 done
+Worker 000: Loading Warehouse    120
+Worker 011: Loading Warehouse     62 done
+Worker 011: Loading Warehouse    121
+Worker 012: Loading Warehouse     69 done
+Worker 012: Loading Warehouse    122
+Worker 024: Loading Warehouse     61 done
+Worker 024: Loading Warehouse    123
+Worker 002: Loading Warehouse     64 done
+Worker 002: Loading Warehouse    124
+Worker 007: Loading Warehouse     72 done
+Worker 007: Loading Warehouse    125
+Worker 014: Loading Warehouse     66 done
+Worker 014: Loading Warehouse    126
+Worker 028: Loading Warehouse     68 done
+Worker 028: Loading Warehouse    127
+Worker 006: Loading Warehouse     63 done
+Worker 006: Loading Warehouse    128
+Worker 005: Loading Warehouse     67 done
+Worker 005: Loading Warehouse    129
+Worker 003: Loading Warehouse     65 done
+Worker 003: Loading Warehouse    130
+Worker 020: Loading Warehouse     74 done
+Worker 020: Loading Warehouse    131
+Worker 046: Loading Warehouse     81 done
+Worker 046: Loading Warehouse    132
+Worker 009: Loading Warehouse     78 done
+Worker 009: Loading Warehouse    133
+Worker 029: Loading Warehouse     70 done
+Worker 029: Loading Warehouse    134
+Worker 001: Loading Warehouse     80 done
+Worker 001: Loading Warehouse    135
+Worker 027: Loading Warehouse     76 done
+Worker 027: Loading Warehouse    136
+Worker 004: Loading Warehouse     83 done
+Worker 004: Loading Warehouse    137
+Worker 015: Loading Warehouse     73 done
+Worker 015: Loading Warehouse    138
+Worker 052: Loading Warehouse     84 done
+Worker 052: Loading Warehouse    139
+Worker 051: Loading Warehouse     86 done
+Worker 051: Loading Warehouse    140
+Worker 031: Loading Warehouse     71 done
+Worker 031: Loading Warehouse    141
+Worker 042: Loading Warehouse     77 done
+Worker 042: Loading Warehouse    142
+Worker 026: Loading Warehouse     85 done
+Worker 026: Loading Warehouse    143
+Worker 053: Loading Warehouse     79 done
+Worker 053: Loading Warehouse    144
+Worker 039: Loading Warehouse     82 done
+Worker 039: Loading Warehouse    145
+Worker 043: Loading Warehouse     75 done
+Worker 043: Loading Warehouse    146
+Worker 058: Loading Warehouse     87 done
+Worker 058: Loading Warehouse    147
+Worker 030: Loading Warehouse     88 done
+Worker 030: Loading Warehouse    148
+Worker 055: Loading Warehouse     92 done
+Worker 055: Loading Warehouse    149
+Worker 017: Loading Warehouse     89 done
+Worker 017: Loading Warehouse    150
+Worker 013: Loading Warehouse     96 done
+Worker 013: Loading Warehouse    151
+Worker 034: Loading Warehouse     93 done
+Worker 034: Loading Warehouse    152
+Worker 021: Loading Warehouse     94 done
+Worker 021: Loading Warehouse    153
+Worker 054: Loading Warehouse     90 done
+Worker 054: Loading Warehouse    154
+Worker 036: Loading Warehouse     97 done
+Worker 036: Loading Warehouse    155
+Worker 022: Loading Warehouse     91 done
+Worker 022: Loading Warehouse    156
+Worker 045: Loading Warehouse     95 done
+Worker 045: Loading Warehouse    157
+Worker 044: Loading Warehouse    109 done
+Worker 044: Loading Warehouse    158
+Worker 033: Loading Warehouse    101 done
+Worker 033: Loading Warehouse    159
+Worker 025: Loading Warehouse    104 done
+Worker 025: Loading Warehouse    160
+Worker 023: Loading Warehouse    102 done
+Worker 023: Loading Warehouse    161
+Worker 010: Loading Warehouse    106 done
+Worker 010: Loading Warehouse    162
+Worker 008: Loading Warehouse     99 done
+Worker 008: Loading Warehouse    163
+Worker 032: Loading Warehouse    113 done
+Worker 032: Loading Warehouse    164
+Worker 056: Loading Warehouse    110 done
+Worker 056: Loading Warehouse    165
+Worker 018: Loading Warehouse     98 done
+Worker 018: Loading Warehouse    166
+Worker 047: Loading Warehouse    103 done
+Worker 047: Loading Warehouse    167
+Worker 057: Loading Warehouse    107 done
+Worker 057: Loading Warehouse    168
+Worker 059: Loading Warehouse    105 done
+Worker 059: Loading Warehouse    169
+Worker 049: Loading Warehouse    117 done
+Worker 049: Loading Warehouse    170
+Worker 035: Loading Warehouse    108 done
+Worker 035: Loading Warehouse    171
+Worker 048: Loading Warehouse    111 done
+Worker 048: Loading Warehouse    172
+Worker 016: Loading Warehouse    112 done
+Worker 016: Loading Warehouse    173
+Worker 038: Loading Warehouse    100 done
+Worker 038: Loading Warehouse    174
+Worker 041: Loading Warehouse    119 done
+Worker 041: Loading Warehouse    175
+Worker 019: Loading Warehouse    114 done
+Worker 019: Loading Warehouse    176
+Worker 037: Loading Warehouse    118 done
+Worker 037: Loading Warehouse    177
+Worker 000: Loading Warehouse    120 done
+Worker 000: Loading Warehouse    178
+Worker 040: Loading Warehouse    115 done
+Worker 040: Loading Warehouse    179
+Worker 050: Loading Warehouse    116 done
+Worker 050: Loading Warehouse    180
+Worker 014: Loading Warehouse    126 done
+Worker 014: Loading Warehouse    181
+Worker 011: Loading Warehouse    121 done
+Worker 011: Loading Warehouse    182
+Worker 007: Loading Warehouse    125 done
+Worker 007: Loading Warehouse    183
+Worker 028: Loading Warehouse    127 done
+Worker 028: Loading Warehouse    184
+Worker 012: Loading Warehouse    122 done
+Worker 012: Loading Warehouse    185
+Worker 024: Loading Warehouse    123 done
+Worker 024: Loading Warehouse    186
+Worker 005: Loading Warehouse    129 done
+Worker 005: Loading Warehouse    187
+Worker 002: Loading Warehouse    124 done
+Worker 002: Loading Warehouse    188
+Worker 006: Loading Warehouse    128 done
+Worker 006: Loading Warehouse    189
+Worker 001: Loading Warehouse    135 done
+Worker 001: Loading Warehouse    190
+Worker 020: Loading Warehouse    131 done
+Worker 020: Loading Warehouse    191
+Worker 046: Loading Warehouse    132 done
+Worker 046: Loading Warehouse    192
+Worker 009: Loading Warehouse    133 done
+Worker 009: Loading Warehouse    193
+Worker 003: Loading Warehouse    130 done
+Worker 003: Loading Warehouse    194
+Worker 029: Loading Warehouse    134 done
+Worker 029: Loading Warehouse    195
+Worker 039: Loading Warehouse    145 done
+Worker 039: Loading Warehouse    196
+Worker 027: Loading Warehouse    136 done
+Worker 027: Loading Warehouse    197
+Worker 015: Loading Warehouse    138 done
+Worker 015: Loading Warehouse    198
+Worker 004: Loading Warehouse    137 done
+Worker 004: Loading Warehouse    199
+Worker 051: Loading Warehouse    140 done
+Worker 051: Loading Warehouse    200
+Worker 026: Loading Warehouse    143 done
+Worker 026: Loading Warehouse    201
+Worker 055: Loading Warehouse    149 done
+Worker 055: Loading Warehouse    202
+Worker 031: Loading Warehouse    141 done
+Worker 031: Loading Warehouse    203
+Worker 036: Loading Warehouse    155 done
+Worker 036: Loading Warehouse    204
+Worker 034: Loading Warehouse    152 done
+Worker 034: Loading Warehouse    205
+Worker 052: Loading Warehouse    139 done
+Worker 052: Loading Warehouse    206
+Worker 053: Loading Warehouse    144 done
+Worker 053: Loading Warehouse    207
+Worker 042: Loading Warehouse    142 done
+Worker 042: Loading Warehouse    208
+Worker 043: Loading Warehouse    146 done
+Worker 043: Loading Warehouse    209
+Worker 022: Loading Warehouse    156 done
+Worker 022: Loading Warehouse    210
+Worker 017: Loading Warehouse    150 done
+Worker 017: Loading Warehouse    211
+Worker 044: Loading Warehouse    158 done
+Worker 044: Loading Warehouse    212
+Worker 021: Loading Warehouse    153 done
+Worker 021: Loading Warehouse    213
+Worker 033: Loading Warehouse    159 done
+Worker 033: Loading Warehouse    214
+Worker 013: Loading Warehouse    151 done
+Worker 013: Loading Warehouse    215
+Worker 058: Loading Warehouse    147 done
+Worker 058: Loading Warehouse    216
+Worker 025: Loading Warehouse    160 done
+Worker 025: Loading Warehouse    217
+Worker 030: Loading Warehouse    148 done
+Worker 030: Loading Warehouse    218
+Worker 032: Loading Warehouse    164 done
+Worker 032: Loading Warehouse    219
+Worker 018: Loading Warehouse    166 done
+Worker 018: Loading Warehouse    220
+Worker 045: Loading Warehouse    157 done
+Worker 045: Loading Warehouse    221
+Worker 054: Loading Warehouse    154 done
+Worker 054: Loading Warehouse    222
+Worker 023: Loading Warehouse    161 done
+Worker 023: Loading Warehouse    223
+Worker 010: Loading Warehouse    162 done
+Worker 010: Loading Warehouse    224
+Worker 008: Loading Warehouse    163 done
+Worker 008: Loading Warehouse    225
+Worker 035: Loading Warehouse    171 done
+Worker 035: Loading Warehouse    226
+Worker 057: Loading Warehouse    168 done
+Worker 057: Loading Warehouse    227
+Worker 056: Loading Warehouse    165 done
+Worker 056: Loading Warehouse    228
+Worker 049: Loading Warehouse    170 done
+Worker 049: Loading Warehouse    229
+Worker 059: Loading Warehouse    169 done
+Worker 059: Loading Warehouse    230
+Worker 047: Loading Warehouse    167 done
+Worker 047: Loading Warehouse    231
+Worker 048: Loading Warehouse    172 done
+Worker 048: Loading Warehouse    232
+Worker 016: Loading Warehouse    173 done
+Worker 016: Loading Warehouse    233
+Worker 000: Loading Warehouse    178 done
+Worker 000: Loading Warehouse    234
+Worker 040: Loading Warehouse    179 done
+Worker 040: Loading Warehouse    235
+Worker 019: Loading Warehouse    176 done
+Worker 019: Loading Warehouse    236
+Worker 037: Loading Warehouse    177 done
+Worker 037: Loading Warehouse    237
+Worker 038: Loading Warehouse    174 done
+Worker 038: Loading Warehouse    238
+Worker 041: Loading Warehouse    175 done
+Worker 041: Loading Warehouse    239
+Worker 050: Loading Warehouse    180 done
+Worker 050: Loading Warehouse    240
+Worker 014: Loading Warehouse    181 done
+Worker 014: Loading Warehouse    241
+Worker 007: Loading Warehouse    183 done
+Worker 007: Loading Warehouse    242
+Worker 012: Loading Warehouse    185 done
+Worker 012: Loading Warehouse    243
+Worker 005: Loading Warehouse    187 done
+Worker 002: Loading Warehouse    188 done
+Worker 002: Loading Warehouse    245
+Worker 005: Loading Warehouse    244
+Worker 011: Loading Warehouse    182 done
+Worker 011: Loading Warehouse    246
+Worker 024: Loading Warehouse    186 done
+Worker 024: Loading Warehouse    247
+Worker 028: Loading Warehouse    184 done
+Worker 028: Loading Warehouse    248
+Worker 020: Loading Warehouse    191 done
+Worker 020: Loading Warehouse    249
+Worker 006: Loading Warehouse    189 done
+Worker 006: Loading Warehouse    250
+Worker 001: Loading Warehouse    190 done
+Worker 001: Loading Warehouse    251
+Worker 009: Loading Warehouse    193 done
+Worker 009: Loading Warehouse    252
+Worker 046: Loading Warehouse    192 done
+Worker 046: Loading Warehouse    253
+Worker 031: Loading Warehouse    203 done
+Worker 031: Loading Warehouse    254
+Worker 003: Loading Warehouse    194 done
+Worker 003: Loading Warehouse    255
+Worker 015: Loading Warehouse    198 done
+Worker 015: Loading Warehouse    256
+Worker 039: Loading Warehouse    196 done
+Worker 039: Loading Warehouse    257
+Worker 051: Loading Warehouse    200 done
+Worker 051: Loading Warehouse    258
+Worker 004: Loading Warehouse    199 done
+Worker 004: Loading Warehouse    259
+Worker 036: Loading Warehouse    204 done
+Worker 036: Loading Warehouse    260
+Worker 026: Loading Warehouse    201 done
+Worker 026: Loading Warehouse    261
+Worker 029: Loading Warehouse    195 done
+Worker 029: Loading Warehouse    262
+Worker 027: Loading Warehouse    197 done
+Worker 027: Loading Warehouse    263
+Worker 055: Loading Warehouse    202 done
+Worker 055: Loading Warehouse    264
+Worker 058: Loading Warehouse    216 done
+Worker 058: Loading Warehouse    265
+Worker 023: Loading Warehouse    223 done
+Worker 023: Loading Warehouse    266
+Worker 034: Loading Warehouse    205 done
+Worker 034: Loading Warehouse    267
+Worker 013: Loading Warehouse    215 done
+Worker 013: Loading Warehouse    268
+Worker 022: Loading Warehouse    210 done
+Worker 022: Loading Warehouse    269
+Worker 017: Loading Warehouse    211 done
+Worker 017: Loading Warehouse    270
+Worker 010: Loading Warehouse    224 done
+Worker 010: Loading Warehouse    271
+Worker 042: Loading Warehouse    208 done
+Worker 042: Loading Warehouse    272
+Worker 033: Loading Warehouse    214 done
+Worker 033: Loading Warehouse    273
+Worker 025: Loading Warehouse    217 done
+Worker 025: Loading Warehouse    274
+Worker 000: Loading Warehouse    234 done
+Worker 000: Loading Warehouse    275
+Worker 056: Loading Warehouse    228 done
+Worker 056: Loading Warehouse    276
+Worker 030: Loading Warehouse    218 done
+Worker 030: Loading Warehouse    277
+Worker 021: Loading Warehouse    213 done
+Worker 021: Loading Warehouse    278
+Worker 053: Loading Warehouse    207 done
+Worker 053: Loading Warehouse    279
+Worker 045: Loading Warehouse    221 done
+Worker 045: Loading Warehouse    280
+Worker 044: Loading Warehouse    212 done
+Worker 044: Loading Warehouse    281
+Worker 032: Loading Warehouse    219 done
+Worker 032: Loading Warehouse    282
+Worker 052: Loading Warehouse    206 done
+Worker 052: Loading Warehouse    283
+Worker 054: Loading Warehouse    222 done
+Worker 054: Loading Warehouse    284
+Worker 057: Loading Warehouse    227 done
+Worker 057: Loading Warehouse    285
+Worker 018: Loading Warehouse    220 done
+Worker 018: Loading Warehouse    286
+Worker 043: Loading Warehouse    209 done
+Worker 043: Loading Warehouse    287
+Worker 035: Loading Warehouse    226 done
+Worker 035: Loading Warehouse    288
+Worker 048: Loading Warehouse    232 done
+Worker 048: Loading Warehouse    289
+Worker 038: Loading Warehouse    238 done
+Worker 038: Loading Warehouse    290
+Worker 008: Loading Warehouse    225 done
+Worker 008: Loading Warehouse    291
+Worker 049: Loading Warehouse    229 done
+Worker 049: Loading Warehouse    292
+Worker 037: Loading Warehouse    237 done
+Worker 037: Loading Warehouse    293
+Worker 016: Loading Warehouse    233 done
+Worker 016: Loading Warehouse    294
+Worker 040: Loading Warehouse    235 done
+Worker 040: Loading Warehouse    295
+Worker 059: Loading Warehouse    230 done
+Worker 059: Loading Warehouse    296
+Worker 047: Loading Warehouse    231 done
+Worker 047: Loading Warehouse    297
+Worker 050: Loading Warehouse    240 done
+Worker 050: Loading Warehouse    298
+Worker 019: Loading Warehouse    236 done
+Worker 019: Loading Warehouse    299
+Worker 041: Loading Warehouse    239 done
+Worker 041: Loading Warehouse    300
+Worker 007: Loading Warehouse    242 done
+Worker 007: Loading Warehouse    301
+Worker 014: Loading Warehouse    241 done
+Worker 014: Loading Warehouse    302
+Worker 012: Loading Warehouse    243 done
+Worker 012: Loading Warehouse    303
+Worker 020: Loading Warehouse    249 done
+Worker 020: Loading Warehouse    304
+Worker 005: Loading Warehouse    244 done
+Worker 005: Loading Warehouse    305
+Worker 002: Loading Warehouse    245 done
+Worker 002: Loading Warehouse    306
+Worker 006: Loading Warehouse    250 done
+Worker 006: Loading Warehouse    307
+Worker 024: Loading Warehouse    247 done
+Worker 024: Loading Warehouse    308
+Worker 011: Loading Warehouse    246 done
+Worker 011: Loading Warehouse    309
+Worker 028: Loading Warehouse    248 done
+Worker 028: Loading Warehouse    310
+Worker 003: Loading Warehouse    255 done
+Worker 003: Loading Warehouse    311
+Worker 004: Loading Warehouse    259 done
+Worker 004: Loading Warehouse    312
+Worker 001: Loading Warehouse    251 done
+Worker 001: Loading Warehouse    313
+Worker 046: Loading Warehouse    253 done
+Worker 046: Loading Warehouse    314
+Worker 039: Loading Warehouse    257 done
+Worker 039: Loading Warehouse    315
+Worker 027: Loading Warehouse    263 done
+Worker 027: Loading Warehouse    316
+Worker 031: Loading Warehouse    254 done
+Worker 031: Loading Warehouse    317
+Worker 015: Loading Warehouse    256 done
+Worker 015: Loading Warehouse    318
+Worker 009: Loading Warehouse    252 done
+Worker 009: Loading Warehouse    319
+Worker 036: Loading Warehouse    260 done
+Worker 036: Loading Warehouse    320
+Worker 051: Loading Warehouse    258 done
+Worker 051: Loading Warehouse    321
+Worker 026: Loading Warehouse    261 done
+Worker 026: Loading Warehouse    322
+Worker 029: Loading Warehouse    262 done
+Worker 029: Loading Warehouse    323
+Worker 058: Loading Warehouse    265 done
+Worker 058: Loading Warehouse    324
+Worker 013: Loading Warehouse    268 done
+Worker 013: Loading Warehouse    325
+Worker 055: Loading Warehouse    264 done
+Worker 055: Loading Warehouse    326
+Worker 022: Loading Warehouse    269 done
+Worker 022: Loading Warehouse    327
+Worker 017: Loading Warehouse    270 done
+Worker 017: Loading Warehouse    328
+Worker 023: Loading Warehouse    266 done
+Worker 023: Loading Warehouse    329
+Worker 042: Loading Warehouse    272 done
+Worker 042: Loading Warehouse    330
+Worker 030: Loading Warehouse    277 done
+Worker 030: Loading Warehouse    331
+Worker 033: Loading Warehouse    273 done
+Worker 033: Loading Warehouse    332
+Worker 034: Loading Warehouse    267 done
+Worker 034: Loading Warehouse    333
+Worker 056: Loading Warehouse    276 done
+Worker 056: Loading Warehouse    334
+Worker 010: Loading Warehouse    271 done
+Worker 010: Loading Warehouse    335
+Worker 044: Loading Warehouse    281 done
+Worker 044: Loading Warehouse    336
+Worker 045: Loading Warehouse    280 done
+Worker 045: Loading Warehouse    337
+Worker 000: Loading Warehouse    275 done
+Worker 000: Loading Warehouse    338
+Worker 021: Loading Warehouse    278 done
+Worker 021: Loading Warehouse    339
+Worker 032: Loading Warehouse    282 done
+Worker 032: Loading Warehouse    340
+Worker 025: Loading Warehouse    274 done
+Worker 025: Loading Warehouse    341
+Worker 053: Loading Warehouse    279 done
+Worker 053: Loading Warehouse    342
+Worker 035: Loading Warehouse    288 done
+Worker 035: Loading Warehouse    343
+Worker 057: Loading Warehouse    285 done
+Worker 057: Loading Warehouse    344
+Worker 018: Loading Warehouse    286 done
+Worker 018: Loading Warehouse    345
+Worker 054: Loading Warehouse    284 done
+Worker 054: Loading Warehouse    346
+Worker 040: Loading Warehouse    295 done
+Worker 040: Loading Warehouse    347
+Worker 059: Loading Warehouse    296 done
+Worker 059: Loading Warehouse    348
+Worker 038: Loading Warehouse    290 done
+Worker 038: Loading Warehouse    349
+Worker 008: Loading Warehouse    291 done
+Worker 008: Loading Warehouse    350
+Worker 043: Loading Warehouse    287 done
+Worker 043: Loading Warehouse    351
+Worker 037: Loading Warehouse    293 done
+Worker 037: Loading Warehouse    352
+Worker 052: Loading Warehouse    283 done
+Worker 052: Loading Warehouse    353
+Worker 048: Loading Warehouse    289 done
+Worker 048: Loading Warehouse    354
+Worker 047: Loading Warehouse    297 done
+Worker 047: Loading Warehouse    355
+Worker 041: Loading Warehouse    300 done
+Worker 041: Loading Warehouse    356
+Worker 016: Loading Warehouse    294 done
+Worker 016: Loading Warehouse    357
+Worker 049: Loading Warehouse    292 done
+Worker 049: Loading Warehouse    358
+Worker 019: Loading Warehouse    299 done
+Worker 019: Loading Warehouse    359
+Worker 050: Loading Warehouse    298 done
+Worker 050: Loading Warehouse    360
+Worker 024: Loading Warehouse    308 done
+Worker 024: Loading Warehouse    361
+Worker 006: Loading Warehouse    307 done
+Worker 006: Loading Warehouse    362
+Worker 011: Loading Warehouse    309 done
+Worker 011: Loading Warehouse    363
+Worker 014: Loading Warehouse    302 done
+Worker 014: Loading Warehouse    364
+Worker 005: Loading Warehouse    305 done
+Worker 005: Loading Warehouse    365
+Worker 002: Loading Warehouse    306 done
+Worker 002: Loading Warehouse    366
+Worker 020: Loading Warehouse    304 done
+Worker 020: Loading Warehouse    367
+Worker 012: Loading Warehouse    303 done
+Worker 012: Loading Warehouse    368
+Worker 007: Loading Warehouse    301 done
+Worker 007: Loading Warehouse    369
+Worker 028: Loading Warehouse    310 done
+Worker 028: Loading Warehouse    370
+Worker 001: Loading Warehouse    313 done
+Worker 001: Loading Warehouse    371
+Worker 046: Loading Warehouse    314 done
+Worker 046: Loading Warehouse    372
+Worker 015: Loading Warehouse    318 done
+Worker 015: Loading Warehouse    373
+Worker 004: Loading Warehouse    312 done
+Worker 004: Loading Warehouse    374
+Worker 003: Loading Warehouse    311 done
+Worker 003: Loading Warehouse    375
+Worker 027: Loading Warehouse    316 done
+Worker 027: Loading Warehouse    376
+Worker 039: Loading Warehouse    315 done
+Worker 039: Loading Warehouse    377
+Worker 031: Loading Warehouse    317 done
+Worker 031: Loading Warehouse    378
+Worker 036: Loading Warehouse    320 done
+Worker 036: Loading Warehouse    379
+Worker 009: Loading Warehouse    319 done
+Worker 009: Loading Warehouse    380
+Worker 051: Loading Warehouse    321 done
+Worker 051: Loading Warehouse    381
+Worker 029: Loading Warehouse    323 done
+Worker 029: Loading Warehouse    382
+Worker 026: Loading Warehouse    322 done
+Worker 026: Loading Warehouse    383
+Worker 055: Loading Warehouse    326 done
+Worker 055: Loading Warehouse    384
+Worker 023: Loading Warehouse    329 done
+Worker 023: Loading Warehouse    385
+Worker 013: Loading Warehouse    325 done
+Worker 013: Loading Warehouse    386
+Worker 033: Loading Warehouse    332 done
+Worker 033: Loading Warehouse    387
+Worker 010: Loading Warehouse    335 done
+Worker 010: Loading Warehouse    388
+Worker 030: Loading Warehouse    331 done
+Worker 030: Loading Warehouse    389
+Worker 042: Loading Warehouse    330 done
+Worker 042: Loading Warehouse    390
+Worker 034: Loading Warehouse    333 done
+Worker 034: Loading Warehouse    391
+Worker 022: Loading Warehouse    327 done
+Worker 022: Loading Warehouse    392
+Worker 017: Loading Warehouse    328 done
+Worker 017: Loading Warehouse    393
+Worker 058: Loading Warehouse    324 done
+Worker 058: Loading Warehouse    394
+Worker 000: Loading Warehouse    338 done
+Worker 000: Loading Warehouse    395
+Worker 044: Loading Warehouse    336 done
+Worker 044: Loading Warehouse    396
+Worker 021: Loading Warehouse    339 done
+Worker 021: Loading Warehouse    397
+Worker 018: Loading Warehouse    345 done
+Worker 018: Loading Warehouse    398
+Worker 056: Loading Warehouse    334 done
+Worker 056: Loading Warehouse    399
+Worker 057: Loading Warehouse    344 done
+Worker 057: Loading Warehouse    400
+Worker 032: Loading Warehouse    340 done
+Worker 032: Loading Warehouse    401
+Worker 053: Loading Warehouse    342 done
+Worker 053: Loading Warehouse    402
+Worker 025: Loading Warehouse    341 done
+Worker 025: Loading Warehouse    403
+Worker 035: Loading Warehouse    343 done
+Worker 035: Loading Warehouse    404
+Worker 045: Loading Warehouse    337 done
+Worker 045: Loading Warehouse    405
+Worker 048: Loading Warehouse    354 done
+Worker 048: Loading Warehouse    406
+Worker 054: Loading Warehouse    346 done
+Worker 054: Loading Warehouse    407
+Worker 037: Loading Warehouse    352 done
+Worker 037: Loading Warehouse    408
+Worker 008: Loading Warehouse    350 done
+Worker 008: Loading Warehouse    409
+Worker 040: Loading Warehouse    347 done
+Worker 040: Loading Warehouse    410
+Worker 038: Loading Warehouse    349 done
+Worker 038: Loading Warehouse    411
+Worker 059: Loading Warehouse    348 done
+Worker 059: Loading Warehouse    412
+Worker 052: Loading Warehouse    353 done
+Worker 052: Loading Warehouse    413
+Worker 019: Loading Warehouse    359 done
+Worker 019: Loading Warehouse    414
+Worker 050: Loading Warehouse    360 done
+Worker 050: Loading Warehouse    415
+Worker 047: Loading Warehouse    355 done
+Worker 047: Loading Warehouse    416
+Worker 016: Loading Warehouse    357 done
+Worker 016: Loading Warehouse    417
+Worker 049: Loading Warehouse    358 done
+Worker 049: Loading Warehouse    418
+Worker 041: Loading Warehouse    356 done
+Worker 041: Loading Warehouse    419
+Worker 043: Loading Warehouse    351 done
+Worker 043: Loading Warehouse    420
+Worker 006: Loading Warehouse    362 done
+Worker 006: Loading Warehouse    421
+Worker 024: Loading Warehouse    361 done
+Worker 024: Loading Warehouse    422
+Worker 011: Loading Warehouse    363 done
+Worker 011: Loading Warehouse    423
+Worker 005: Loading Warehouse    365 done
+Worker 005: Loading Warehouse    424
+Worker 002: Loading Warehouse    366 done
+Worker 002: Loading Warehouse    425
+Worker 014: Loading Warehouse    364 done
+Worker 014: Loading Warehouse    426
+Worker 012: Loading Warehouse    368 done
+Worker 012: Loading Warehouse    427
+Worker 003: Loading Warehouse    375 done
+Worker 003: Loading Warehouse    428
+Worker 028: Loading Warehouse    370 done
+Worker 028: Loading Warehouse    429
+Worker 020: Loading Warehouse    367 done
+Worker 020: Loading Warehouse    430
+Worker 001: Loading Warehouse    371 done
+Worker 001: Loading Warehouse    431
+Worker 004: Loading Warehouse    374 done
+Worker 004: Loading Warehouse    432
+Worker 007: Loading Warehouse    369 done
+Worker 007: Loading Warehouse    433
+Worker 046: Loading Warehouse    372 done
+Worker 046: Loading Warehouse    434
+Worker 015: Loading Warehouse    373 done
+Worker 015: Loading Warehouse    435
+Worker 039: Loading Warehouse    377 done
+Worker 039: Loading Warehouse    436
+Worker 027: Loading Warehouse    376 done
+Worker 027: Loading Warehouse    437
+Worker 009: Loading Warehouse    380 done
+Worker 009: Loading Warehouse    438
+Worker 036: Loading Warehouse    379 done
+Worker 036: Loading Warehouse    439
+Worker 031: Loading Warehouse    378 done
+Worker 031: Loading Warehouse    440
+Worker 026: Loading Warehouse    383 done
+Worker 026: Loading Warehouse    441
+Worker 051: Loading Warehouse    381 done
+Worker 051: Loading Warehouse    442
+Worker 029: Loading Warehouse    382 done
+Worker 029: Loading Warehouse    443
+Worker 013: Loading Warehouse    386 done
+Worker 013: Loading Warehouse    444
+Worker 055: Loading Warehouse    384 done
+Worker 055: Loading Warehouse    445
+Worker 023: Loading Warehouse    385 done
+Worker 023: Loading Warehouse    446
+Worker 010: Loading Warehouse    388 done
+Worker 010: Loading Warehouse    447
+Worker 017: Loading Warehouse    393 done
+Worker 017: Loading Warehouse    448
+Worker 033: Loading Warehouse    387 done
+Worker 033: Loading Warehouse    449
+Worker 044: Loading Warehouse    396 done
+Worker 044: Loading Warehouse    450
+Worker 042: Loading Warehouse    390 done
+Worker 042: Loading Warehouse    451
+Worker 000: Loading Warehouse    395 done
+Worker 000: Loading Warehouse    452
+Worker 057: Loading Warehouse    400 done
+Worker 057: Loading Warehouse    453
+Worker 030: Loading Warehouse    389 done
+Worker 030: Loading Warehouse    454
+Worker 056: Loading Warehouse    399 done
+Worker 056: Loading Warehouse    455
+Worker 034: Loading Warehouse    391 done
+Worker 034: Loading Warehouse    456
+Worker 018: Loading Warehouse    398 done
+Worker 018: Loading Warehouse    457
+Worker 035: Loading Warehouse    404 done
+Worker 035: Loading Warehouse    458
+Worker 058: Loading Warehouse    394 done
+Worker 058: Loading Warehouse    459
+Worker 021: Loading Warehouse    397 done
+Worker 021: Loading Warehouse    460
+Worker 032: Loading Warehouse    401 done
+Worker 032: Loading Warehouse    461
+Worker 045: Loading Warehouse    405 done
+Worker 045: Loading Warehouse    462
+Worker 008: Loading Warehouse    409 done
+Worker 008: Loading Warehouse    463
+Worker 022: Loading Warehouse    392 done
+Worker 022: Loading Warehouse    464
+Worker 054: Loading Warehouse    407 done
+Worker 054: Loading Warehouse    465
+Worker 037: Loading Warehouse    408 done
+Worker 037: Loading Warehouse    466
+Worker 053: Loading Warehouse    402 done
+Worker 053: Loading Warehouse    467
+Worker 025: Loading Warehouse    403 done
+Worker 025: Loading Warehouse    468
+Worker 059: Loading Warehouse    412 done
+Worker 059: Loading Warehouse    469
+Worker 040: Loading Warehouse    410 done
+Worker 040: Loading Warehouse    470
+Worker 038: Loading Warehouse    411 done
+Worker 038: Loading Warehouse    471
+Worker 048: Loading Warehouse    406 done
+Worker 048: Loading Warehouse    472
+Worker 050: Loading Warehouse    415 done
+Worker 050: Loading Warehouse    473
+Worker 019: Loading Warehouse    414 done
+Worker 019: Loading Warehouse    474
+Worker 041: Loading Warehouse    419 done
+Worker 041: Loading Warehouse    475
+Worker 047: Loading Warehouse    416 done
+Worker 047: Loading Warehouse    476
+Worker 052: Loading Warehouse    413 done
+Worker 052: Loading Warehouse    477
+Worker 049: Loading Warehouse    418 done
+Worker 049: Loading Warehouse    478
+Worker 016: Loading Warehouse    417 done
+Worker 016: Loading Warehouse    479
+Worker 043: Loading Warehouse    420 done
+Worker 043: Loading Warehouse    480
+Worker 024: Loading Warehouse    422 done
+Worker 024: Loading Warehouse    481
+Worker 006: Loading Warehouse    421 done
+Worker 006: Loading Warehouse    482
+Worker 005: Loading Warehouse    424 done
+Worker 005: Loading Warehouse    483
+Worker 011: Loading Warehouse    423 done
+Worker 011: Loading Warehouse    484
+Worker 002: Loading Warehouse    425 done
+Worker 002: Loading Warehouse    485
+Worker 014: Loading Warehouse    426 done
+Worker 014: Loading Warehouse    486
+Worker 012: Loading Warehouse    427 done
+Worker 012: Loading Warehouse    487
+Worker 003: Loading Warehouse    428 done
+Worker 003: Loading Warehouse    488
+Worker 004: Loading Warehouse    432 done
+Worker 004: Loading Warehouse    489
+Worker 020: Loading Warehouse    430 done
+Worker 020: Loading Warehouse    490
+Worker 046: Loading Warehouse    434 done
+Worker 046: Loading Warehouse    491
+Worker 009: Loading Warehouse    438 done
+Worker 009: Loading Warehouse    492
+Worker 001: Loading Warehouse    431 done
+Worker 001: Loading Warehouse    493
+Worker 039: Loading Warehouse    436 done
+Worker 039: Loading Warehouse    494
+Worker 028: Loading Warehouse    429 done
+Worker 028: Loading Warehouse    495
+Worker 007: Loading Warehouse    433 done
+Worker 007: Loading Warehouse    496
+Worker 027: Loading Warehouse    437 done
+Worker 027: Loading Warehouse    497
+Worker 015: Loading Warehouse    435 done
+Worker 015: Loading Warehouse    498
+Worker 031: Loading Warehouse    440 done
+Worker 031: Loading Warehouse    499
+Worker 051: Loading Warehouse    442 done
+Worker 051: Loading Warehouse    500
+Worker 036: Loading Warehouse    439 done
+Worker 036: Loading Warehouse    501
+Worker 026: Loading Warehouse    441 done
+Worker 026: Loading Warehouse    502
+Worker 029: Loading Warehouse    443 done
+Worker 029: Loading Warehouse    503
+Worker 023: Loading Warehouse    446 done
+Worker 023: Loading Warehouse    504
+Worker 010: Loading Warehouse    447 done
+Worker 010: Loading Warehouse    505
+Worker 000: Loading Warehouse    452 done
+Worker 000: Loading Warehouse    506
+Worker 055: Loading Warehouse    445 done
+Worker 055: Loading Warehouse    507
+Worker 030: Loading Warehouse    454 done
+Worker 030: Loading Warehouse    508
+Worker 042: Loading Warehouse    451 done
+Worker 042: Loading Warehouse    509
+Worker 057: Loading Warehouse    453 done
+Worker 057: Loading Warehouse    510
+Worker 013: Loading Warehouse    444 done
+Worker 013: Loading Warehouse    511
+Worker 033: Loading Warehouse    449 done
+Worker 033: Loading Warehouse    512
+Worker 017: Loading Warehouse    448 done
+Worker 017: Loading Warehouse    513
+Worker 058: Loading Warehouse    459 done
+Worker 058: Loading Warehouse    514
+Worker 044: Loading Warehouse    450 done
+Worker 044: Loading Warehouse    515
+Worker 018: Loading Warehouse    457 done
+Worker 018: Loading Warehouse    516
+Worker 008: Loading Warehouse    463 done
+Worker 008: Loading Warehouse    517
+Worker 032: Loading Warehouse    461 done
+Worker 032: Loading Warehouse    518
+Worker 056: Loading Warehouse    455 done
+Worker 056: Loading Warehouse    519
+Worker 035: Loading Warehouse    458 done
+Worker 035: Loading Warehouse    520
+Worker 059: Loading Warehouse    469 done
+Worker 059: Loading Warehouse    521
+Worker 034: Loading Warehouse    456 done
+Worker 034: Loading Warehouse    522
+Worker 040: Loading Warehouse    470 done
+Worker 040: Loading Warehouse    523
+Worker 025: Loading Warehouse    468 done
+Worker 025: Loading Warehouse    524
+Worker 045: Loading Warehouse    462 done
+Worker 045: Loading Warehouse    525
+Worker 021: Loading Warehouse    460 done
+Worker 021: Loading Warehouse    526
+Worker 054: Loading Warehouse    465 done
+Worker 054: Loading Warehouse    527
+Worker 022: Loading Warehouse    464 done
+Worker 022: Loading Warehouse    528
+Worker 038: Loading Warehouse    471 done
+Worker 038: Loading Warehouse    529
+Worker 053: Loading Warehouse    467 done
+Worker 053: Loading Warehouse    530
+Worker 019: Loading Warehouse    474 done
+Worker 019: Loading Warehouse    531
+Worker 050: Loading Warehouse    473 done
+Worker 050: Loading Warehouse    532
+Worker 048: Loading Warehouse    472 done
+Worker 048: Loading Warehouse    533
+Worker 041: Loading Warehouse    475 done
+Worker 041: Loading Warehouse    534
+Worker 016: Loading Warehouse    479 done
+Worker 016: Loading Warehouse    535
+Worker 037: Loading Warehouse    466 done
+Worker 037: Loading Warehouse    536
+Worker 049: Loading Warehouse    478 done
+Worker 049: Loading Warehouse    537
+Worker 047: Loading Warehouse    476 done
+Worker 047: Loading Warehouse    538
+Worker 052: Loading Warehouse    477 done
+Worker 052: Loading Warehouse    539
+Worker 043: Loading Warehouse    480 done
+Worker 043: Loading Warehouse    540
+Worker 024: Loading Warehouse    481 done
+Worker 024: Loading Warehouse    541
+Worker 002: Loading Warehouse    485 done
+Worker 002: Loading Warehouse    542
+Worker 005: Loading Warehouse    483 done
+Worker 005: Loading Warehouse    543
+Worker 006: Loading Warehouse    482 done
+Worker 006: Loading Warehouse    544
+Worker 011: Loading Warehouse    484 done
+Worker 011: Loading Warehouse    545
+Worker 003: Loading Warehouse    488 done
+Worker 003: Loading Warehouse    546
+Worker 012: Loading Warehouse    487 done
+Worker 012: Loading Warehouse    547
+Worker 004: Loading Warehouse    489 done
+Worker 004: Loading Warehouse    548
+Worker 014: Loading Warehouse    486 done
+Worker 014: Loading Warehouse    549
+Worker 020: Loading Warehouse    490 done
+Worker 020: Loading Warehouse    550
+Worker 009: Loading Warehouse    492 done
+Worker 009: Loading Warehouse    551
+Worker 046: Loading Warehouse    491 done
+Worker 046: Loading Warehouse    552
+Worker 001: Loading Warehouse    493 done
+Worker 001: Loading Warehouse    553
+Worker 007: Loading Warehouse    496 done
+Worker 007: Loading Warehouse    554
+Worker 015: Loading Warehouse    498 done
+Worker 015: Loading Warehouse    555
+Worker 028: Loading Warehouse    495 done
+Worker 028: Loading Warehouse    556
+Worker 039: Loading Warehouse    494 done
+Worker 039: Loading Warehouse    557
+Worker 027: Loading Warehouse    497 done
+Worker 027: Loading Warehouse    558
+Worker 036: Loading Warehouse    501 done
+Worker 036: Loading Warehouse    559
+Worker 051: Loading Warehouse    500 done
+Worker 051: Loading Warehouse    560
+Worker 031: Loading Warehouse    499 done
+Worker 031: Loading Warehouse    561
+Worker 026: Loading Warehouse    502 done
+Worker 026: Loading Warehouse    562
+Worker 000: Loading Warehouse    506 done
+Worker 000: Loading Warehouse    563
+Worker 023: Loading Warehouse    504 done
+Worker 023: Loading Warehouse    564
+Worker 013: Loading Warehouse    511 done
+Worker 013: Loading Warehouse    565
+Worker 010: Loading Warehouse    505 done
+Worker 010: Loading Warehouse    566
+Worker 029: Loading Warehouse    503 done
+Worker 029: Loading Warehouse    567
+Worker 030: Loading Warehouse    508 done
+Worker 030: Loading Warehouse    568
+Worker 044: Loading Warehouse    515 done
+Worker 044: Loading Warehouse    569
+Worker 057: Loading Warehouse    510 done
+Worker 057: Loading Warehouse    570
+Worker 042: Loading Warehouse    509 done
+Worker 042: Loading Warehouse    571
+Worker 008: Loading Warehouse    517 done
+Worker 008: Loading Warehouse    572
+Worker 054: Loading Warehouse    527 done
+Worker 054: Loading Warehouse    573
+Worker 056: Loading Warehouse    519 done
+Worker 056: Loading Warehouse    574
+Worker 033: Loading Warehouse    512 done
+Worker 033: Loading Warehouse    575
+Worker 035: Loading Warehouse    520 done
+Worker 035: Loading Warehouse    576
+Worker 017: Loading Warehouse    513 done
+Worker 017: Loading Warehouse    577
+Worker 040: Loading Warehouse    523 done
+Worker 040: Loading Warehouse    578
+Worker 059: Loading Warehouse    521 done
+Worker 059: Loading Warehouse    579
+Worker 032: Loading Warehouse    518 done
+Worker 032: Loading Warehouse    580
+Worker 055: Loading Warehouse    507 done
+Worker 055: Loading Warehouse    581
+Worker 034: Loading Warehouse    522 done
+Worker 034: Loading Warehouse    582
+Worker 025: Loading Warehouse    524 done
+Worker 025: Loading Warehouse    583
+Worker 021: Loading Warehouse    526 done
+Worker 021: Loading Warehouse    584
+Worker 018: Loading Warehouse    516 done
+Worker 018: Loading Warehouse    585
+Worker 022: Loading Warehouse    528 done
+Worker 022: Loading Warehouse    586
+Worker 058: Loading Warehouse    514 done
+Worker 058: Loading Warehouse    587
+Worker 045: Loading Warehouse    525 done
+Worker 045: Loading Warehouse    588
+Worker 038: Loading Warehouse    529 done
+Worker 038: Loading Warehouse    589
+Worker 048: Loading Warehouse    533 done
+Worker 048: Loading Warehouse    590
+Worker 016: Loading Warehouse    535 done
+Worker 016: Loading Warehouse    591
+Worker 019: Loading Warehouse    531 done
+Worker 019: Loading Warehouse    592
+Worker 050: Loading Warehouse    532 done
+Worker 050: Loading Warehouse    593
+Worker 052: Loading Warehouse    539 done
+Worker 052: Loading Warehouse    594
+Worker 049: Loading Warehouse    537 done
+Worker 049: Loading Warehouse    595
+Worker 043: Loading Warehouse    540 done
+Worker 043: Loading Warehouse    596
+Worker 037: Loading Warehouse    536 done
+Worker 037: Loading Warehouse    597
+Worker 053: Loading Warehouse    530 done
+Worker 053: Loading Warehouse    598
+Worker 041: Loading Warehouse    534 done
+Worker 041: Loading Warehouse    599
+Worker 047: Loading Warehouse    538 done
+Worker 047: Loading Warehouse    600
+Worker 024: Loading Warehouse    541 done
+Worker 024: Loading Warehouse    601
+Worker 002: Loading Warehouse    542 done
+Worker 002: Loading Warehouse    602
+Worker 005: Loading Warehouse    543 done
+Worker 005: Loading Warehouse    603
+Worker 006: Loading Warehouse    544 done
+Worker 006: Loading Warehouse    604
+Worker 011: Loading Warehouse    545 done
+Worker 011: Loading Warehouse    605
+Worker 012: Loading Warehouse    547 done
+Worker 012: Loading Warehouse    606
+Worker 003: Loading Warehouse    546 done
+Worker 003: Loading Warehouse    607
+Worker 004: Loading Warehouse    548 done
+Worker 004: Loading Warehouse    608
+Worker 014: Loading Warehouse    549 done
+Worker 014: Loading Warehouse    609
+Worker 015: Loading Warehouse    555 done
+Worker 015: Loading Warehouse    610
+Worker 046: Loading Warehouse    552 done
+Worker 046: Loading Warehouse    611
+Worker 007: Loading Warehouse    554 done
+Worker 007: Loading Warehouse    612
+Worker 001: Loading Warehouse    553 done
+Worker 001: Loading Warehouse    613
+Worker 020: Loading Warehouse    550 done
+Worker 020: Loading Warehouse    614
+Worker 009: Loading Warehouse    551 done
+Worker 009: Loading Warehouse    615
+Worker 028: Loading Warehouse    556 done
+Worker 028: Loading Warehouse    616
+Worker 039: Loading Warehouse    557 done
+Worker 039: Loading Warehouse    617
+Worker 027: Loading Warehouse    558 done
+Worker 027: Loading Warehouse    618
+Worker 013: Loading Warehouse    565 done
+Worker 013: Loading Warehouse    619
+Worker 026: Loading Warehouse    562 done
+Worker 026: Loading Warehouse    620
+Worker 051: Loading Warehouse    560 done
+Worker 051: Loading Warehouse    621
+Worker 036: Loading Warehouse    559 done
+Worker 036: Loading Warehouse    622
+Worker 023: Loading Warehouse    564 done
+Worker 023: Loading Warehouse    623
+Worker 010: Loading Warehouse    566 done
+Worker 010: Loading Warehouse    624
+Worker 031: Loading Warehouse    561 done
+Worker 031: Loading Warehouse    625
+Worker 029: Loading Warehouse    567 done
+Worker 029: Loading Warehouse    626
+Worker 044: Loading Warehouse    569 done
+Worker 044: Loading Warehouse    627
+Worker 000: Loading Warehouse    563 done
+Worker 000: Loading Warehouse    628
+Worker 030: Loading Warehouse    568 done
+Worker 030: Loading Warehouse    629
+Worker 056: Loading Warehouse    574 done
+Worker 056: Loading Warehouse    630
+Worker 057: Loading Warehouse    570 done
+Worker 057: Loading Warehouse    631
+Worker 055: Loading Warehouse    581 done
+Worker 055: Loading Warehouse    632
+Worker 042: Loading Warehouse    571 done
+Worker 042: Loading Warehouse    633
+Worker 032: Loading Warehouse    580 done
+Worker 032: Loading Warehouse    634
+Worker 018: Loading Warehouse    585 done
+Worker 018: Loading Warehouse    635
+Worker 034: Loading Warehouse    582 done
+Worker 034: Loading Warehouse    636
+Worker 033: Loading Warehouse    575 done
+Worker 033: Loading Warehouse    637
+Worker 059: Loading Warehouse    579 done
+Worker 059: Loading Warehouse    638
+Worker 054: Loading Warehouse    573 done
+Worker 054: Loading Warehouse    639
+Worker 021: Loading Warehouse    584 done
+Worker 021: Loading Warehouse    640
+Worker 035: Loading Warehouse    576 done
+Worker 035: Loading Warehouse    641
+Worker 048: Loading Warehouse    590 done
+Worker 048: Loading Warehouse    642
+Worker 008: Loading Warehouse    572 done
+Worker 008: Loading Warehouse    643
+Worker 058: Loading Warehouse    587 done
+Worker 058: Loading Warehouse    644
+Worker 040: Loading Warehouse    578 done
+Worker 040: Loading Warehouse    645
+Worker 025: Loading Warehouse    583 done
+Worker 025: Loading Warehouse    646
+Worker 017: Loading Warehouse    577 done
+Worker 017: Loading Warehouse    647
+Worker 019: Loading Warehouse    592 done
+Worker 019: Loading Warehouse    648
+Worker 052: Loading Warehouse    594 done
+Worker 052: Loading Warehouse    649
+Worker 016: Loading Warehouse    591 done
+Worker 016: Loading Warehouse    650
+Worker 049: Loading Warehouse    595 done
+Worker 049: Loading Warehouse    651
+Worker 047: Loading Warehouse    600 done
+Worker 047: Loading Warehouse    652
+Worker 043: Loading Warehouse    596 done
+Worker 043: Loading Warehouse    653
+Worker 038: Loading Warehouse    589 done
+Worker 038: Loading Warehouse    654
+Worker 022: Loading Warehouse    586 done
+Worker 022: Loading Warehouse    655
+Worker 045: Loading Warehouse    588 done
+Worker 045: Loading Warehouse    656
+Worker 050: Loading Warehouse    593 done
+Worker 050: Loading Warehouse    657
+Worker 053: Loading Warehouse    598 done
+Worker 053: Loading Warehouse    658
+Worker 041: Loading Warehouse    599 done
+Worker 041: Loading Warehouse    659
+Worker 037: Loading Warehouse    597 done
+Worker 037: Loading Warehouse    660
+Worker 024: Loading Warehouse    601 done
+Worker 024: Loading Warehouse    661
+Worker 002: Loading Warehouse    602 done
+Worker 002: Loading Warehouse    662
+Worker 005: Loading Warehouse    603 done
+Worker 005: Loading Warehouse    663
+Worker 012: Loading Warehouse    606 done
+Worker 012: Loading Warehouse    664
+Worker 006: Loading Warehouse    604 done
+Worker 006: Loading Warehouse    665
+Worker 011: Loading Warehouse    605 done
+Worker 011: Loading Warehouse    666
+Worker 004: Loading Warehouse    608 done
+Worker 004: Loading Warehouse    667
+Worker 014: Loading Warehouse    609 done
+Worker 014: Loading Warehouse    668
+Worker 003: Loading Warehouse    607 done
+Worker 003: Loading Warehouse    669
+Worker 046: Loading Warehouse    611 done
+Worker 046: Loading Warehouse    670
+Worker 007: Loading Warehouse    612 done
+Worker 007: Loading Warehouse    671
+Worker 039: Loading Warehouse    617 done
+Worker 039: Loading Warehouse    672
+Worker 001: Loading Warehouse    613 done
+Worker 001: Loading Warehouse    673
+Worker 015: Loading Warehouse    610 done
+Worker 015: Loading Warehouse    674
+Worker 020: Loading Warehouse    614 done
+Worker 020: Loading Warehouse    675
+Worker 027: Loading Warehouse    618 done
+Worker 027: Loading Warehouse    676
+Worker 009: Loading Warehouse    615 done
+Worker 009: Loading Warehouse    677
+Worker 028: Loading Warehouse    616 done
+Worker 013: Loading Warehouse    619 done
+Worker 028: Loading Warehouse    678
+Worker 013: Loading Warehouse    679
+Worker 026: Loading Warehouse    620 done
+Worker 026: Loading Warehouse    680
+Worker 036: Loading Warehouse    622 done
+Worker 036: Loading Warehouse    681
+Worker 031: Loading Warehouse    625 done
+Worker 031: Loading Warehouse    682
+Worker 023: Loading Warehouse    623 done
+Worker 023: Loading Warehouse    683
+Worker 051: Loading Warehouse    621 done
+Worker 051: Loading Warehouse    684
+Worker 030: Loading Warehouse    629 done
+Worker 030: Loading Warehouse    685
+Worker 056: Loading Warehouse    630 done
+Worker 056: Loading Warehouse    686
+Worker 000: Loading Warehouse    628 done
+Worker 000: Loading Warehouse    687
+Worker 029: Loading Warehouse    626 done
+Worker 029: Loading Warehouse    688
+Worker 010: Loading Warehouse    624 done
+Worker 010: Loading Warehouse    689
+Worker 044: Loading Warehouse    627 done
+Worker 044: Loading Warehouse    690
+Worker 032: Loading Warehouse    634 done
+Worker 032: Loading Warehouse    691
+Worker 057: Loading Warehouse    631 done
+Worker 057: Loading Warehouse    692
+Worker 042: Loading Warehouse    633 done
+Worker 042: Loading Warehouse    693
+Worker 059: Loading Warehouse    638 done
+Worker 059: Loading Warehouse    694
+Worker 055: Loading Warehouse    632 done
+Worker 055: Loading Warehouse    695
+Worker 018: Loading Warehouse    635 done
+Worker 018: Loading Warehouse    696
+Worker 021: Loading Warehouse    640 done
+Worker 021: Loading Warehouse    697
+Worker 054: Loading Warehouse    639 done
+Worker 054: Loading Warehouse    698
+Worker 033: Loading Warehouse    637 done
+Worker 033: Loading Warehouse    699
+Worker 034: Loading Warehouse    636 done
+Worker 034: Loading Warehouse    700
+Worker 058: Loading Warehouse    644 done
+Worker 058: Loading Warehouse    701
+Worker 047: Loading Warehouse    652 done
+Worker 047: Loading Warehouse    702
+Worker 035: Loading Warehouse    641 done
+Worker 035: Loading Warehouse    703
+Worker 040: Loading Warehouse    645 done
+Worker 040: Loading Warehouse    704
+Worker 049: Loading Warehouse    651 done
+Worker 049: Loading Warehouse    705
+Worker 016: Loading Warehouse    650 done
+Worker 016: Loading Warehouse    706
+Worker 019: Loading Warehouse    648 done
+Worker 019: Loading Warehouse    707
+Worker 025: Loading Warehouse    646 done
+Worker 025: Loading Warehouse    708
+Worker 052: Loading Warehouse    649 done
+Worker 052: Loading Warehouse    709
+Worker 017: Loading Warehouse    647 done
+Worker 017: Loading Warehouse    710
+Worker 045: Loading Warehouse    656 done
+Worker 045: Loading Warehouse    711
+Worker 048: Loading Warehouse    642 done
+Worker 048: Loading Warehouse    712
+Worker 038: Loading Warehouse    654 done
+Worker 038: Loading Warehouse    713
+Worker 037: Loading Warehouse    660 done
+Worker 037: Loading Warehouse    714
+Worker 008: Loading Warehouse    643 done
+Worker 008: Loading Warehouse    715
+Worker 022: Loading Warehouse    655 done
+Worker 022: Loading Warehouse    716
+Worker 041: Loading Warehouse    659 done
+Worker 041: Loading Warehouse    717
+Worker 043: Loading Warehouse    653 done
+Worker 043: Loading Warehouse    718
+Worker 053: Loading Warehouse    658 done
+Worker 053: Loading Warehouse    719
+Worker 050: Loading Warehouse    657 done
+Worker 050: Loading Warehouse    720
+Worker 024: Loading Warehouse    661 done
+Worker 024: Loading Warehouse    721
+Worker 002: Loading Warehouse    662 done
+Worker 002: Loading Warehouse    722
+Worker 005: Loading Warehouse    663 done
+Worker 005: Loading Warehouse    723
+Worker 012: Loading Warehouse    664 done
+Worker 012: Loading Warehouse    724
+Worker 006: Loading Warehouse    665 done
+Worker 006: Loading Warehouse    725
+Worker 004: Loading Warehouse    667 done
+Worker 004: Loading Warehouse    726
+Worker 011: Loading Warehouse    666 done
+Worker 011: Loading Warehouse    727
+Worker 014: Loading Warehouse    668 done
+Worker 014: Loading Warehouse    728
+Worker 003: Loading Warehouse    669 done
+Worker 003: Loading Warehouse    729
+Worker 007: Loading Warehouse    671 done
+Worker 007: Loading Warehouse    730
+Worker 046: Loading Warehouse    670 done
+Worker 046: Loading Warehouse    731
+Worker 027: Loading Warehouse    676 done
+Worker 027: Loading Warehouse    732
+Worker 009: Loading Warehouse    677 done
+Worker 009: Loading Warehouse    733
+Worker 028: Loading Warehouse    678 done
+Worker 028: Loading Warehouse    734
+Worker 015: Loading Warehouse    674 done
+Worker 015: Loading Warehouse    735
+Worker 001: Loading Warehouse    673 done
+Worker 001: Loading Warehouse    736
+Worker 039: Loading Warehouse    672 done
+Worker 039: Loading Warehouse    737
+Worker 020: Loading Warehouse    675 done
+Worker 020: Loading Warehouse    738
+Worker 013: Loading Warehouse    679 done
+Worker 013: Loading Warehouse    739
+Worker 026: Loading Warehouse    680 done
+Worker 026: Loading Warehouse    740
+Worker 031: Loading Warehouse    682 done
+Worker 031: Loading Warehouse    741
+Worker 036: Loading Warehouse    681 done
+Worker 036: Loading Warehouse    742
+Worker 023: Loading Warehouse    683 done
+Worker 023: Loading Warehouse    743
+Worker 056: Loading Warehouse    686 done
+Worker 056: Loading Warehouse    744
+Worker 000: Loading Warehouse    687 done
+Worker 000: Loading Warehouse    745
+Worker 032: Loading Warehouse    691 done
+Worker 032: Loading Warehouse    746
+Worker 030: Loading Warehouse    685 done
+Worker 030: Loading Warehouse    747
+Worker 051: Loading Warehouse    684 done
+Worker 051: Loading Warehouse    748
+Worker 044: Loading Warehouse    690 done
+Worker 044: Loading Warehouse    749
+Worker 059: Loading Warehouse    694 done
+Worker 059: Loading Warehouse    750
+Worker 010: Loading Warehouse    689 done
+Worker 010: Loading Warehouse    751
+Worker 057: Loading Warehouse    692 done
+Worker 057: Loading Warehouse    752
+Worker 029: Loading Warehouse    688 done
+Worker 029: Loading Warehouse    753
+Worker 042: Loading Warehouse    693 done
+Worker 042: Loading Warehouse    754
+Worker 018: Loading Warehouse    696 done
+Worker 018: Loading Warehouse    755
+Worker 055: Loading Warehouse    695 done
+Worker 055: Loading Warehouse    756
+Worker 034: Loading Warehouse    700 done
+Worker 034: Loading Warehouse    757
+Worker 033: Loading Warehouse    699 done
+Worker 033: Loading Warehouse    758
+Worker 054: Loading Warehouse    698 done
+Worker 054: Loading Warehouse    759
+Worker 047: Loading Warehouse    702 done
+Worker 047: Loading Warehouse    760
+Worker 021: Loading Warehouse    697 done
+Worker 021: Loading Warehouse    761
+Worker 040: Loading Warehouse    704 done
+Worker 040: Loading Warehouse    762
+Worker 025: Loading Warehouse    708 done
+Worker 025: Loading Warehouse    763
+Worker 035: Loading Warehouse    703 done
+Worker 035: Loading Warehouse    764
+Worker 058: Loading Warehouse    701 done
+Worker 058: Loading Warehouse    765
+Worker 049: Loading Warehouse    705 done
+Worker 049: Loading Warehouse    766
+Worker 052: Loading Warehouse    709 done
+Worker 052: Loading Warehouse    767
+Worker 048: Loading Warehouse    712 done
+Worker 048: Loading Warehouse    768
+Worker 017: Loading Warehouse    710 done
+Worker 017: Loading Warehouse    769
+Worker 019: Loading Warehouse    707 done
+Worker 019: Loading Warehouse    770
+Worker 016: Loading Warehouse    706 done
+Worker 016: Loading Warehouse    771
+Worker 022: Loading Warehouse    716 done
+Worker 022: Loading Warehouse    772
+Worker 038: Loading Warehouse    713 done
+Worker 038: Loading Warehouse    773
+Worker 037: Loading Warehouse    714 done
+Worker 037: Loading Warehouse    774
+Worker 008: Loading Warehouse    715 done
+Worker 008: Loading Warehouse    775
+Worker 045: Loading Warehouse    711 done
+Worker 045: Loading Warehouse    776
+Worker 041: Loading Warehouse    717 done
+Worker 041: Loading Warehouse    777
+Worker 043: Loading Warehouse    718 done
+Worker 043: Loading Warehouse    778
+Worker 050: Loading Warehouse    720 done
+Worker 050: Loading Warehouse    779
+Worker 053: Loading Warehouse    719 done
+Worker 053: Loading Warehouse    780
+Worker 002: Loading Warehouse    722 done
+Worker 002: Loading Warehouse    781
+Worker 024: Loading Warehouse    721 done
+Worker 024: Loading Warehouse    782
+Worker 005: Loading Warehouse    723 done
+Worker 005: Loading Warehouse    783
+Worker 006: Loading Warehouse    725 done
+Worker 006: Loading Warehouse    784
+Worker 011: Loading Warehouse    727 done
+Worker 011: Loading Warehouse    785
+Worker 012: Loading Warehouse    724 done
+Worker 012: Loading Warehouse    786
+Worker 004: Loading Warehouse    726 done
+Worker 004: Loading Warehouse    787
+Worker 003: Loading Warehouse    729 done
+Worker 003: Loading Warehouse    788
+Worker 014: Loading Warehouse    728 done
+Worker 014: Loading Warehouse    789
+Worker 007: Loading Warehouse    730 done
+Worker 007: Loading Warehouse    790
+Worker 009: Loading Warehouse    733 done
+Worker 009: Loading Warehouse    791
+Worker 046: Loading Warehouse    731 done
+Worker 046: Loading Warehouse    792
+Worker 027: Loading Warehouse    732 done
+Worker 027: Loading Warehouse    793
+Worker 020: Loading Warehouse    738 done
+Worker 020: Loading Warehouse    794
+Worker 001: Loading Warehouse    736 done
+Worker 001: Loading Warehouse    795
+Worker 028: Loading Warehouse    734 done
+Worker 028: Loading Warehouse    796
+Worker 015: Loading Warehouse    735 done
+Worker 015: Loading Warehouse    797
+Worker 036: Loading Warehouse    742 done
+Worker 036: Loading Warehouse    798
+Worker 023: Loading Warehouse    743 done
+Worker 023: Loading Warehouse    799
+Worker 039: Loading Warehouse    737 done
+Worker 039: Loading Warehouse    800
+Worker 013: Loading Warehouse    739 done
+Worker 013: Loading Warehouse    801
+Worker 031: Loading Warehouse    741 done
+Worker 031: Loading Warehouse    802
+Worker 026: Loading Warehouse    740 done
+Worker 026: Loading Warehouse    803
+Worker 000: Loading Warehouse    745 done
+Worker 000: Loading Warehouse    804
+Worker 030: Loading Warehouse    747 done
+Worker 030: Loading Warehouse    805
+Worker 056: Loading Warehouse    744 done
+Worker 056: Loading Warehouse    806
+Worker 057: Loading Warehouse    752 done
+Worker 057: Loading Warehouse    807
+Worker 032: Loading Warehouse    746 done
+Worker 032: Loading Warehouse    808
+Worker 029: Loading Warehouse    753 done
+Worker 029: Loading Warehouse    809
+Worker 044: Loading Warehouse    749 done
+Worker 044: Loading Warehouse    810
+Worker 051: Loading Warehouse    748 done
+Worker 051: Loading Warehouse    811
+Worker 042: Loading Warehouse    754 done
+Worker 042: Loading Warehouse    812
+Worker 010: Loading Warehouse    751 done
+Worker 010: Loading Warehouse    813
+Worker 059: Loading Warehouse    750 done
+Worker 059: Loading Warehouse    814
+Worker 055: Loading Warehouse    756 done
+Worker 055: Loading Warehouse    815
+Worker 018: Loading Warehouse    755 done
+Worker 018: Loading Warehouse    816
+Worker 034: Loading Warehouse    757 done
+Worker 034: Loading Warehouse    817
+Worker 054: Loading Warehouse    759 done
+Worker 054: Loading Warehouse    818
+Worker 040: Loading Warehouse    762 done
+Worker 040: Loading Warehouse    819
+Worker 035: Loading Warehouse    764 done
+Worker 035: Loading Warehouse    820
+Worker 021: Loading Warehouse    761 done
+Worker 021: Loading Warehouse    821
+Worker 047: Loading Warehouse    760 done
+Worker 047: Loading Warehouse    822
+Worker 025: Loading Warehouse    763 done
+Worker 025: Loading Warehouse    823
+Worker 058: Loading Warehouse    765 done
+Worker 058: Loading Warehouse    824
+Worker 049: Loading Warehouse    766 done
+Worker 049: Loading Warehouse    825
+Worker 033: Loading Warehouse    758 done
+Worker 033: Loading Warehouse    826
+Worker 052: Loading Warehouse    767 done
+Worker 052: Loading Warehouse    827
+Worker 019: Loading Warehouse    770 done
+Worker 019: Loading Warehouse    828
+Worker 048: Loading Warehouse    768 done
+Worker 048: Loading Warehouse    829
+Worker 016: Loading Warehouse    771 done
+Worker 016: Loading Warehouse    830
+Worker 045: Loading Warehouse    776 done
+Worker 045: Loading Warehouse    831
+Worker 038: Loading Warehouse    773 done
+Worker 038: Loading Warehouse    832
+Worker 022: Loading Warehouse    772 done
+Worker 022: Loading Warehouse    833
+Worker 043: Loading Warehouse    778 done
+Worker 043: Loading Warehouse    834
+Worker 017: Loading Warehouse    769 done
+Worker 017: Loading Warehouse    835
+Worker 008: Loading Warehouse    775 done
+Worker 008: Loading Warehouse    836
+Worker 037: Loading Warehouse    774 done
+Worker 037: Loading Warehouse    837
+Worker 041: Loading Warehouse    777 done
+Worker 041: Loading Warehouse    838
+Worker 053: Loading Warehouse    780 done
+Worker 053: Loading Warehouse    839
+Worker 050: Loading Warehouse    779 done
+Worker 050: Loading Warehouse    840
+Worker 002: Loading Warehouse    781 done
+Worker 002: Loading Warehouse    841
+Worker 024: Loading Warehouse    782 done
+Worker 024: Loading Warehouse    842
+Worker 005: Loading Warehouse    783 done
+Worker 005: Loading Warehouse    843
+Worker 011: Loading Warehouse    785 done
+Worker 011: Loading Warehouse    844
+Worker 006: Loading Warehouse    784 done
+Worker 006: Loading Warehouse    845
+Worker 004: Loading Warehouse    787 done
+Worker 004: Loading Warehouse    846
+Worker 012: Loading Warehouse    786 done
+Worker 012: Loading Warehouse    847
+Worker 007: Loading Warehouse    790 done
+Worker 007: Loading Warehouse    848
+Worker 003: Loading Warehouse    788 done
+Worker 003: Loading Warehouse    849
+Worker 014: Loading Warehouse    789 done
+Worker 014: Loading Warehouse    850
+Worker 027: Loading Warehouse    793 done
+Worker 027: Loading Warehouse    851
+Worker 020: Loading Warehouse    794 done
+Worker 020: Loading Warehouse    852
+Worker 046: Loading Warehouse    792 done
+Worker 046: Loading Warehouse    853
+Worker 009: Loading Warehouse    791 done
+Worker 009: Loading Warehouse    854
+Worker 001: Loading Warehouse    795 done
+Worker 001: Loading Warehouse    855
+Worker 013: Loading Warehouse    801 done
+Worker 013: Loading Warehouse    856
+Worker 028: Loading Warehouse    796 done
+Worker 028: Loading Warehouse    857
+Worker 015: Loading Warehouse    797 done
+Worker 015: Loading Warehouse    858
+Worker 031: Loading Warehouse    802 done
+Worker 031: Loading Warehouse    859
+Worker 023: Loading Warehouse    799 done
+Worker 023: Loading Warehouse    860
+Worker 036: Loading Warehouse    798 done
+Worker 036: Loading Warehouse    861
+Worker 039: Loading Warehouse    800 done
+Worker 039: Loading Warehouse    862
+Worker 026: Loading Warehouse    803 done
+Worker 026: Loading Warehouse    863
+Worker 000: Loading Warehouse    804 done
+Worker 000: Loading Warehouse    864
+Worker 030: Loading Warehouse    805 done
+Worker 030: Loading Warehouse    865
+Worker 057: Loading Warehouse    807 done
+Worker 057: Loading Warehouse    866
+Worker 029: Loading Warehouse    809 done
+Worker 029: Loading Warehouse    867
+Worker 044: Loading Warehouse    810 done
+Worker 044: Loading Warehouse    868
+Worker 056: Loading Warehouse    806 done
+Worker 056: Loading Warehouse    869
+Worker 032: Loading Warehouse    808 done
+Worker 032: Loading Warehouse    870
+Worker 034: Loading Warehouse    817 done
+Worker 034: Loading Warehouse    871
+Worker 018: Loading Warehouse    816 done
+Worker 018: Loading Warehouse    872
+Worker 010: Loading Warehouse    813 done
+Worker 010: Loading Warehouse    873
+Worker 059: Loading Warehouse    814 done
+Worker 059: Loading Warehouse    874
+Worker 051: Loading Warehouse    811 done
+Worker 051: Loading Warehouse    875
+Worker 054: Loading Warehouse    818 done
+Worker 054: Loading Warehouse    876
+Worker 055: Loading Warehouse    815 done
+Worker 055: Loading Warehouse    877
+Worker 042: Loading Warehouse    812 done
+Worker 042: Loading Warehouse    878
+Worker 021: Loading Warehouse    821 done
+Worker 021: Loading Warehouse    879
+Worker 040: Loading Warehouse    819 done
+Worker 040: Loading Warehouse    880
+Worker 035: Loading Warehouse    820 done
+Worker 035: Loading Warehouse    881
+Worker 025: Loading Warehouse    823 done
+Worker 025: Loading Warehouse    882
+Worker 019: Loading Warehouse    828 done
+Worker 019: Loading Warehouse    883
+Worker 016: Loading Warehouse    830 done
+Worker 016: Loading Warehouse    884
+Worker 058: Loading Warehouse    824 done
+Worker 058: Loading Warehouse    885
+Worker 033: Loading Warehouse    826 done
+Worker 033: Loading Warehouse    886
+Worker 047: Loading Warehouse    822 done
+Worker 047: Loading Warehouse    887
+Worker 052: Loading Warehouse    827 done
+Worker 052: Loading Warehouse    888
+Worker 022: Loading Warehouse    833 done
+Worker 022: Loading Warehouse    889
+Worker 048: Loading Warehouse    829 done
+Worker 048: Loading Warehouse    890
+Worker 017: Loading Warehouse    835 done
+Worker 017: Loading Warehouse    891
+Worker 049: Loading Warehouse    825 done
+Worker 049: Loading Warehouse    892
+Worker 045: Loading Warehouse    831 done
+Worker 045: Loading Warehouse    893
+Worker 043: Loading Warehouse    834 done
+Worker 043: Loading Warehouse    894
+Worker 008: Loading Warehouse    836 done
+Worker 008: Loading Warehouse    895
+Worker 041: Loading Warehouse    838 done
+Worker 041: Loading Warehouse    896
+Worker 038: Loading Warehouse    832 done
+Worker 038: Loading Warehouse    897
+Worker 037: Loading Warehouse    837 done
+Worker 037: Loading Warehouse    898
+Worker 050: Loading Warehouse    840 done
+Worker 050: Loading Warehouse    899
+Worker 053: Loading Warehouse    839 done
+Worker 053: Loading Warehouse    900
+Worker 002: Loading Warehouse    841 done
+Worker 002: Loading Warehouse    901
+Worker 024: Loading Warehouse    842 done
+Worker 024: Loading Warehouse    902
+Worker 005: Loading Warehouse    843 done
+Worker 005: Loading Warehouse    903
+Worker 011: Loading Warehouse    844 done
+Worker 011: Loading Warehouse    904
+Worker 006: Loading Warehouse    845 done
+Worker 006: Loading Warehouse    905
+Worker 004: Loading Warehouse    846 done
+Worker 004: Loading Warehouse    906
+Worker 007: Loading Warehouse    848 done
+Worker 007: Loading Warehouse    907
+Worker 012: Loading Warehouse    847 done
+Worker 012: Loading Warehouse    908
+Worker 014: Loading Warehouse    850 done
+Worker 014: Loading Warehouse    909
+Worker 003: Loading Warehouse    849 done
+Worker 003: Loading Warehouse    910
+Worker 020: Loading Warehouse    852 done
+Worker 020: Loading Warehouse    911
+Worker 027: Loading Warehouse    851 done
+Worker 027: Loading Warehouse    912
+Worker 009: Loading Warehouse    854 done
+Worker 009: Loading Warehouse    913
+Worker 028: Loading Warehouse    857 done
+Worker 028: Loading Warehouse    914
+Worker 046: Loading Warehouse    853 done
+Worker 046: Loading Warehouse    915
+Worker 001: Loading Warehouse    855 done
+Worker 001: Loading Warehouse    916
+Worker 015: Loading Warehouse    858 done
+Worker 015: Loading Warehouse    917
+Worker 013: Loading Warehouse    856 done
+Worker 013: Loading Warehouse    918
+Worker 031: Loading Warehouse    859 done
+Worker 031: Loading Warehouse    919
+Worker 036: Loading Warehouse    861 done
+Worker 036: Loading Warehouse    920
+Worker 039: Loading Warehouse    862 done
+Worker 039: Loading Warehouse    921
+Worker 023: Loading Warehouse    860 done
+Worker 023: Loading Warehouse    922
+Worker 000: Loading Warehouse    864 done
+Worker 000: Loading Warehouse    923
+Worker 030: Loading Warehouse    865 done
+Worker 030: Loading Warehouse    924
+Worker 034: Loading Warehouse    871 done
+Worker 034: Loading Warehouse    925
+Worker 026: Loading Warehouse    863 done
+Worker 026: Loading Warehouse    926
+Worker 056: Loading Warehouse    869 done
+Worker 056: Loading Warehouse    927
+Worker 057: Loading Warehouse    866 done
+Worker 057: Loading Warehouse    928
+Worker 029: Loading Warehouse    867 done
+Worker 029: Loading Warehouse    929
+Worker 044: Loading Warehouse    868 done
+Worker 044: Loading Warehouse    930
+Worker 032: Loading Warehouse    870 done
+Worker 032: Loading Warehouse    931
+Worker 018: Loading Warehouse    872 done
+Worker 018: Loading Warehouse    932
+Worker 054: Loading Warehouse    876 done
+Worker 054: Loading Warehouse    933
+Worker 059: Loading Warehouse    874 done
+Worker 059: Loading Warehouse    934
+Worker 055: Loading Warehouse    877 done
+Worker 055: Loading Warehouse    935
+Worker 040: Loading Warehouse    880 done
+Worker 040: Loading Warehouse    936
+Worker 010: Loading Warehouse    873 done
+Worker 010: Loading Warehouse    937
+Worker 035: Loading Warehouse    881 done
+Worker 035: Loading Warehouse    938
+Worker 019: Loading Warehouse    883 done
+Worker 019: Loading Warehouse    939
+Worker 021: Loading Warehouse    879 done
+Worker 021: Loading Warehouse    940
+Worker 016: Loading Warehouse    884 done
+Worker 016: Loading Warehouse    941
+Worker 042: Loading Warehouse    878 done
+Worker 042: Loading Warehouse    942
+Worker 025: Loading Warehouse    882 done
+Worker 025: Loading Warehouse    943
+Worker 051: Loading Warehouse    875 done
+Worker 051: Loading Warehouse    944
+Worker 058: Loading Warehouse    885 done
+Worker 058: Loading Warehouse    945
+Worker 052: Loading Warehouse    888 done
+Worker 052: Loading Warehouse    946
+Worker 047: Loading Warehouse    887 done
+Worker 047: Loading Warehouse    947
+Worker 048: Loading Warehouse    890 done
+Worker 048: Loading Warehouse    948
+Worker 022: Loading Warehouse    889 done
+Worker 022: Loading Warehouse    949
+Worker 033: Loading Warehouse    886 done
+Worker 033: Loading Warehouse    950
+Worker 017: Loading Warehouse    891 done
+Worker 017: Loading Warehouse    951
+Worker 049: Loading Warehouse    892 done
+Worker 049: Loading Warehouse    952
+Worker 008: Loading Warehouse    895 done
+Worker 008: Loading Warehouse    953
+Worker 053: Loading Warehouse    900 done
+Worker 053: Loading Warehouse    954
+Worker 050: Loading Warehouse    899 done
+Worker 050: Loading Warehouse    955
+Worker 038: Loading Warehouse    897 done
+Worker 038: Loading Warehouse    956
+Worker 041: Loading Warehouse    896 done
+Worker 041: Loading Warehouse    957
+Worker 037: Loading Warehouse    898 done
+Worker 037: Loading Warehouse    958
+Worker 045: Loading Warehouse    893 done
+Worker 045: Loading Warehouse    959
+Worker 043: Loading Warehouse    894 done
+Worker 043: Loading Warehouse    960
+Worker 024: Loading Warehouse    902 done
+Worker 024: Loading Warehouse    961
+Worker 005: Loading Warehouse    903 done
+Worker 005: Loading Warehouse    962
+Worker 002: Loading Warehouse    901 done
+Worker 002: Loading Warehouse    963
+Worker 011: Loading Warehouse    904 done
+Worker 011: Loading Warehouse    964
+Worker 004: Loading Warehouse    906 done
+Worker 004: Loading Warehouse    965
+Worker 006: Loading Warehouse    905 done
+Worker 006: Loading Warehouse    966
+Worker 007: Loading Warehouse    907 done
+Worker 007: Loading Warehouse    967
+Worker 012: Loading Warehouse    908 done
+Worker 012: Loading Warehouse    968
+Worker 009: Loading Warehouse    913 done
+Worker 009: Loading Warehouse    969
+Worker 014: Loading Warehouse    909 done
+Worker 014: Loading Warehouse    970
+Worker 027: Loading Warehouse    912 done
+Worker 027: Loading Warehouse    971
+Worker 003: Loading Warehouse    910 done
+Worker 003: Loading Warehouse    972
+Worker 020: Loading Warehouse    911 done
+Worker 020: Loading Warehouse    973
+Worker 028: Loading Warehouse    914 done
+Worker 028: Loading Warehouse    974
+Worker 046: Loading Warehouse    915 done
+Worker 046: Loading Warehouse    975
+Worker 001: Loading Warehouse    916 done
+Worker 001: Loading Warehouse    976
+Worker 015: Loading Warehouse    917 done
+Worker 015: Loading Warehouse    977
+Worker 013: Loading Warehouse    918 done
+Worker 013: Loading Warehouse    978
+Worker 031: Loading Warehouse    919 done
+Worker 031: Loading Warehouse    979
+Worker 036: Loading Warehouse    920 done
+Worker 036: Loading Warehouse    980
+Worker 039: Loading Warehouse    921 done
+Worker 039: Loading Warehouse    981
+Worker 034: Loading Warehouse    925 done
+Worker 034: Loading Warehouse    982
+Worker 023: Loading Warehouse    922 done
+Worker 023: Loading Warehouse    983
+Worker 000: Loading Warehouse    923 done
+Worker 000: Loading Warehouse    984
+Worker 030: Loading Warehouse    924 done
+Worker 030: Loading Warehouse    985
+Worker 026: Loading Warehouse    926 done
+Worker 026: Loading Warehouse    986
+Worker 056: Loading Warehouse    927 done
+Worker 056: Loading Warehouse    987
+Worker 057: Loading Warehouse    928 done
+Worker 057: Loading Warehouse    988
+Worker 044: Loading Warehouse    930 done
+Worker 044: Loading Warehouse    989
+Worker 029: Loading Warehouse    929 done
+Worker 029: Loading Warehouse    990
+Worker 032: Loading Warehouse    931 done
+Worker 032: Loading Warehouse    991
+Worker 019: Loading Warehouse    939 done
+Worker 019: Loading Warehouse    992
+Worker 018: Loading Warehouse    932 done
+Worker 018: Loading Warehouse    993
+Worker 054: Loading Warehouse    933 done
+Worker 054: Loading Warehouse    994
+Worker 055: Loading Warehouse    935 done
+Worker 055: Loading Warehouse    995
+Worker 040: Loading Warehouse    936 done
+Worker 040: Loading Warehouse    996
+Worker 010: Loading Warehouse    937 done
+Worker 010: Loading Warehouse    997
+Worker 059: Loading Warehouse    934 done
+Worker 059: Loading Warehouse    998
+Worker 025: Loading Warehouse    943 done
+Worker 025: Loading Warehouse    999
+Worker 035: Loading Warehouse    938 done
+Worker 035: Loading Warehouse   1000
+Worker 021: Loading Warehouse    940 done
+Worker 021: Loading Warehouse   1001
+Worker 058: Loading Warehouse    945 done
+Worker 058: Loading Warehouse   1002
+Worker 051: Loading Warehouse    944 done
+Worker 051: Loading Warehouse   1003
+Worker 033: Loading Warehouse    950 done
+Worker 033: Loading Warehouse   1004
+Worker 047: Loading Warehouse    947 done
+Worker 047: Loading Warehouse   1005
+Worker 042: Loading Warehouse    942 done
+Worker 042: Loading Warehouse   1006
+Worker 022: Loading Warehouse    949 done
+Worker 022: Loading Warehouse   1007
+Worker 048: Loading Warehouse    948 done
+Worker 048: Loading Warehouse   1008
+Worker 016: Loading Warehouse    941 done
+Worker 016: Loading Warehouse   1009
+Worker 052: Loading Warehouse    946 done
+Worker 052: Loading Warehouse   1010
+Worker 049: Loading Warehouse    952 done
+Worker 049: Loading Warehouse   1011
+Worker 008: Loading Warehouse    953 done
+Worker 008: Loading Warehouse   1012
+Worker 017: Loading Warehouse    951 done
+Worker 017: Loading Warehouse   1013
+Worker 050: Loading Warehouse    955 done
+Worker 050: Loading Warehouse   1014
+Worker 053: Loading Warehouse    954 done
+Worker 053: Loading Warehouse   1015
+Worker 038: Loading Warehouse    956 done
+Worker 038: Loading Warehouse   1016
+Worker 045: Loading Warehouse    959 done
+Worker 045: Loading Warehouse   1017
+Worker 041: Loading Warehouse    957 done
+Worker 041: Loading Warehouse   1018
+Worker 037: Loading Warehouse    958 done
+Worker 037: Loading Warehouse   1019
+Worker 043: Loading Warehouse    960 done
+Worker 043: Loading Warehouse   1020
+Worker 024: Loading Warehouse    961 done
+Worker 024: Loading Warehouse   1021
+Worker 005: Loading Warehouse    962 done
+Worker 005: Loading Warehouse   1022
+Worker 002: Loading Warehouse    963 done
+Worker 002: Loading Warehouse   1023
+Worker 011: Loading Warehouse    964 done
+Worker 011: Loading Warehouse   1024
+Worker 006: Loading Warehouse    966 done
+Worker 006: Loading Warehouse   1025
+Worker 007: Loading Warehouse    967 done
+Worker 007: Loading Warehouse   1026
+Worker 004: Loading Warehouse    965 done
+Worker 004: Loading Warehouse   1027
+Worker 009: Loading Warehouse    969 done
+Worker 009: Loading Warehouse   1028
+Worker 012: Loading Warehouse    968 done
+Worker 012: Loading Warehouse   1029
+Worker 014: Loading Warehouse    970 done
+Worker 014: Loading Warehouse   1030
+Worker 027: Loading Warehouse    971 done
+Worker 027: Loading Warehouse   1031
+Worker 003: Loading Warehouse    972 done
+Worker 003: Loading Warehouse   1032
+Worker 046: Loading Warehouse    975 done
+Worker 046: Loading Warehouse   1033
+Worker 028: Loading Warehouse    974 done
+Worker 028: Loading Warehouse   1034
+Worker 020: Loading Warehouse    973 done
+Worker 020: Loading Warehouse   1035
+Worker 013: Loading Warehouse    978 done
+Worker 013: Loading Warehouse   1036
+Worker 001: Loading Warehouse    976 done
+Worker 001: Loading Warehouse   1037
+Worker 015: Loading Warehouse    977 done
+Worker 015: Loading Warehouse   1038
+Worker 039: Loading Warehouse    981 done
+Worker 039: Loading Warehouse   1039
+Worker 031: Loading Warehouse    979 done
+Worker 031: Loading Warehouse   1040
+Worker 036: Loading Warehouse    980 done
+Worker 036: Loading Warehouse   1041
+Worker 000: Loading Warehouse    984 done
+Worker 000: Loading Warehouse   1042
+Worker 034: Loading Warehouse    982 done
+Worker 034: Loading Warehouse   1043
+Worker 023: Loading Warehouse    983 done
+Worker 023: Loading Warehouse   1044
+Worker 056: Loading Warehouse    987 done
+Worker 056: Loading Warehouse   1045
+Worker 030: Loading Warehouse    985 done
+Worker 030: Loading Warehouse   1046
+Worker 026: Loading Warehouse    986 done
+Worker 026: Loading Warehouse   1047
+Worker 057: Loading Warehouse    988 done
+Worker 057: Loading Warehouse   1048
+Worker 044: Loading Warehouse    989 done
+Worker 044: Loading Warehouse   1049
+Worker 054: Loading Warehouse    994 done
+Worker 054: Loading Warehouse   1050
+Worker 040: Loading Warehouse    996 done
+Worker 040: Loading Warehouse   1051
+Worker 019: Loading Warehouse    992 done
+Worker 019: Loading Warehouse   1052
+Worker 029: Loading Warehouse    990 done
+Worker 029: Loading Warehouse   1053
+Worker 018: Loading Warehouse    993 done
+Worker 018: Loading Warehouse   1054
+Worker 032: Loading Warehouse    991 done
+Worker 032: Loading Warehouse   1055
+Worker 059: Loading Warehouse    998 done
+Worker 059: Loading Warehouse   1056
+Worker 025: Loading Warehouse    999 done
+Worker 025: Loading Warehouse   1057
+Worker 010: Loading Warehouse    997 done
+Worker 010: Loading Warehouse   1058
+Worker 055: Loading Warehouse    995 done
+Worker 055: Loading Warehouse   1059
+Worker 033: Loading Warehouse   1004 done
+Worker 033: Loading Warehouse   1060
+Worker 035: Loading Warehouse   1000 done
+Worker 035: Loading Warehouse   1061
+Worker 021: Loading Warehouse   1001 done
+Worker 021: Loading Warehouse   1062
+Worker 058: Loading Warehouse   1002 done
+Worker 058: Loading Warehouse   1063
+Worker 051: Loading Warehouse   1003 done
+Worker 051: Loading Warehouse   1064
+Worker 042: Loading Warehouse   1006 done
+Worker 042: Loading Warehouse   1065
+Worker 022: Loading Warehouse   1007 done
+Worker 022: Loading Warehouse   1066
+Worker 047: Loading Warehouse   1005 done
+Worker 047: Loading Warehouse   1067
+Worker 049: Loading Warehouse   1011 done
+Worker 049: Loading Warehouse   1068
+Worker 048: Loading Warehouse   1008 done
+Worker 048: Loading Warehouse   1069
+Worker 052: Loading Warehouse   1010 done
+Worker 052: Loading Warehouse   1070
+Worker 008: Loading Warehouse   1012 done
+Worker 008: Loading Warehouse   1071
+Worker 016: Loading Warehouse   1009 done
+Worker 016: Loading Warehouse   1072
+Worker 053: Loading Warehouse   1015 done
+Worker 053: Loading Warehouse   1073
+Worker 050: Loading Warehouse   1014 done
+Worker 050: Loading Warehouse   1074
+Worker 017: Loading Warehouse   1013 done
+Worker 017: Loading Warehouse   1075
+Worker 043: Loading Warehouse   1020 done
+Worker 043: Loading Warehouse   1076
+Worker 041: Loading Warehouse   1018 done
+Worker 041: Loading Warehouse   1077
+Worker 038: Loading Warehouse   1016 done
+Worker 038: Loading Warehouse   1078
+Worker 045: Loading Warehouse   1017 done
+Worker 045: Loading Warehouse   1079
+Worker 037: Loading Warehouse   1019 done
+Worker 037: Loading Warehouse   1080
+Worker 024: Loading Warehouse   1021 done
+Worker 024: Loading Warehouse   1081
+Worker 005: Loading Warehouse   1022 done
+Worker 005: Loading Warehouse   1082
+Worker 002: Loading Warehouse   1023 done
+Worker 002: Loading Warehouse   1083
+Worker 011: Loading Warehouse   1024 done
+Worker 011: Loading Warehouse   1084
+Worker 007: Loading Warehouse   1026 done
+Worker 007: Loading Warehouse   1085
+Worker 006: Loading Warehouse   1025 done
+Worker 006: Loading Warehouse   1086
+Worker 012: Loading Warehouse   1029 done
+Worker 012: Loading Warehouse   1087
+Worker 004: Loading Warehouse   1027 done
+Worker 004: Loading Warehouse   1088
+Worker 014: Loading Warehouse   1030 done
+Worker 014: Loading Warehouse   1089
+Worker 009: Loading Warehouse   1028 done
+Worker 009: Loading Warehouse   1090
+Worker 046: Loading Warehouse   1033 done
+Worker 046: Loading Warehouse   1091
+Worker 003: Loading Warehouse   1032 done
+Worker 003: Loading Warehouse   1092
+Worker 027: Loading Warehouse   1031 done
+Worker 027: Loading Warehouse   1093
+Worker 020: Loading Warehouse   1035 done
+Worker 020: Loading Warehouse   1094
+Worker 028: Loading Warehouse   1034 done
+Worker 028: Loading Warehouse   1095
+Worker 001: Loading Warehouse   1037 done
+Worker 001: Loading Warehouse   1096
+Worker 013: Loading Warehouse   1036 done
+Worker 013: Loading Warehouse   1097
+Worker 015: Loading Warehouse   1038 done
+Worker 015: Loading Warehouse   1098
+Worker 039: Loading Warehouse   1039 done
+Worker 039: Loading Warehouse   1099
+Worker 023: Loading Warehouse   1044 done
+Worker 023: Loading Warehouse   1100
+Worker 000: Loading Warehouse   1042 done
+Worker 000: Loading Warehouse   1101
+Worker 036: Loading Warehouse   1041 done
+Worker 036: Loading Warehouse   1102
+Worker 031: Loading Warehouse   1040 done
+Worker 031: Loading Warehouse   1103
+Worker 030: Loading Warehouse   1046 done
+Worker 030: Loading Warehouse   1104
+Worker 034: Loading Warehouse   1043 done
+Worker 034: Loading Warehouse   1105
+Worker 056: Loading Warehouse   1045 done
+Worker 056: Loading Warehouse   1106
+Worker 026: Loading Warehouse   1047 done
+Worker 026: Loading Warehouse   1107
+Worker 040: Loading Warehouse   1051 done
+Worker 040: Loading Warehouse   1108
+Worker 044: Loading Warehouse   1049 done
+Worker 044: Loading Warehouse   1109
+Worker 057: Loading Warehouse   1048 done
+Worker 057: Loading Warehouse   1110
+Worker 054: Loading Warehouse   1050 done
+Worker 054: Loading Warehouse   1111
+Worker 018: Loading Warehouse   1054 done
+Worker 018: Loading Warehouse   1112
+Worker 019: Loading Warehouse   1052 done
+Worker 019: Loading Warehouse   1113
+Worker 029: Loading Warehouse   1053 done
+Worker 029: Loading Warehouse   1114
+Worker 059: Loading Warehouse   1056 done
+Worker 059: Loading Warehouse   1115
+Worker 055: Loading Warehouse   1059 done
+Worker 055: Loading Warehouse   1116
+Worker 025: Loading Warehouse   1057 done
+Worker 025: Loading Warehouse   1117
+Worker 032: Loading Warehouse   1055 done
+Worker 032: Loading Warehouse   1118
+Worker 047: Loading Warehouse   1067 done
+Worker 047: Loading Warehouse   1119
+Worker 033: Loading Warehouse   1060 done
+Worker 033: Loading Warehouse   1120
+Worker 010: Loading Warehouse   1058 done
+Worker 010: Loading Warehouse   1121
+Worker 035: Loading Warehouse   1061 done
+Worker 035: Loading Warehouse   1122
+Worker 042: Loading Warehouse   1065 done
+Worker 042: Loading Warehouse   1123
+Worker 049: Loading Warehouse   1068 done
+Worker 049: Loading Warehouse   1124
+Worker 052: Loading Warehouse   1070 done
+Worker 052: Loading Warehouse   1125
+Worker 058: Loading Warehouse   1063 done
+Worker 058: Loading Warehouse   1126
+Worker 051: Loading Warehouse   1064 done
+Worker 051: Loading Warehouse   1127
+Worker 021: Loading Warehouse   1062 done
+Worker 021: Loading Warehouse   1128
+Worker 022: Loading Warehouse   1066 done
+Worker 022: Loading Warehouse   1129
+Worker 048: Loading Warehouse   1069 done
+Worker 048: Loading Warehouse   1130
+Worker 008: Loading Warehouse   1071 done
+Worker 008: Loading Warehouse   1131
+Worker 016: Loading Warehouse   1072 done
+Worker 016: Loading Warehouse   1132
+Worker 053: Loading Warehouse   1073 done
+Worker 053: Loading Warehouse   1133
+Worker 017: Loading Warehouse   1075 done
+Worker 017: Loading Warehouse   1134
+Worker 050: Loading Warehouse   1074 done
+Worker 050: Loading Warehouse   1135
+Worker 037: Loading Warehouse   1080 done
+Worker 037: Loading Warehouse   1136
+Worker 041: Loading Warehouse   1077 done
+Worker 041: Loading Warehouse   1137
+Worker 038: Loading Warehouse   1078 done
+Worker 038: Loading Warehouse   1138
+Worker 043: Loading Warehouse   1076 done
+Worker 043: Loading Warehouse   1139
+Worker 045: Loading Warehouse   1079 done
+Worker 045: Loading Warehouse   1140
+Worker 024: Loading Warehouse   1081 done
+Worker 024: Loading Warehouse   1141
+Worker 005: Loading Warehouse   1082 done
+Worker 005: Loading Warehouse   1142
+Worker 002: Loading Warehouse   1083 done
+Worker 002: Loading Warehouse   1143
+Worker 011: Loading Warehouse   1084 done
+Worker 011: Loading Warehouse   1144
+Worker 007: Loading Warehouse   1085 done
+Worker 007: Loading Warehouse   1145
+Worker 006: Loading Warehouse   1086 done
+Worker 006: Loading Warehouse   1146
+Worker 014: Loading Warehouse   1089 done
+Worker 014: Loading Warehouse   1147
+Worker 012: Loading Warehouse   1087 done
+Worker 012: Loading Warehouse   1148
+Worker 004: Loading Warehouse   1088 done
+Worker 004: Loading Warehouse   1149
+Worker 046: Loading Warehouse   1091 done
+Worker 046: Loading Warehouse   1150
+Worker 003: Loading Warehouse   1092 done
+Worker 003: Loading Warehouse   1151
+Worker 009: Loading Warehouse   1090 done
+Worker 009: Loading Warehouse   1152
+Worker 020: Loading Warehouse   1094 done
+Worker 020: Loading Warehouse   1153
+Worker 027: Loading Warehouse   1093 done
+Worker 027: Loading Warehouse   1154
+Worker 028: Loading Warehouse   1095 done
+Worker 028: Loading Warehouse   1155
+Worker 001: Loading Warehouse   1096 done
+Worker 001: Loading Warehouse   1156
+Worker 013: Loading Warehouse   1097 done
+Worker 013: Loading Warehouse   1157
+Worker 000: Loading Warehouse   1101 done
+Worker 000: Loading Warehouse   1158
+Worker 036: Loading Warehouse   1102 done
+Worker 036: Loading Warehouse   1159
+Worker 015: Loading Warehouse   1098 done
+Worker 015: Loading Warehouse   1160
+Worker 039: Loading Warehouse   1099 done
+Worker 039: Loading Warehouse   1161
+Worker 023: Loading Warehouse   1100 done
+Worker 023: Loading Warehouse   1162
+Worker 031: Loading Warehouse   1103 done
+Worker 031: Loading Warehouse   1163
+Worker 034: Loading Warehouse   1105 done
+Worker 034: Loading Warehouse   1164
+Worker 026: Loading Warehouse   1107 done
+Worker 026: Loading Warehouse   1165
+Worker 030: Loading Warehouse   1104 done
+Worker 030: Loading Warehouse   1166
+Worker 056: Loading Warehouse   1106 done
+Worker 056: Loading Warehouse   1167
+Worker 044: Loading Warehouse   1109 done
+Worker 044: Loading Warehouse   1168
+Worker 057: Loading Warehouse   1110 done
+Worker 057: Loading Warehouse   1169
+Worker 040: Loading Warehouse   1108 done
+Worker 040: Loading Warehouse   1170
+Worker 018: Loading Warehouse   1112 done
+Worker 018: Loading Warehouse   1171
+Worker 054: Loading Warehouse   1111 done
+Worker 054: Loading Warehouse   1172
+Worker 059: Loading Warehouse   1115 done
+Worker 059: Loading Warehouse   1173
+Worker 029: Loading Warehouse   1114 done
+Worker 029: Loading Warehouse   1174
+Worker 019: Loading Warehouse   1113 done
+Worker 019: Loading Warehouse   1175
+Worker 025: Loading Warehouse   1117 done
+Worker 025: Loading Warehouse   1176
+Worker 033: Loading Warehouse   1120 done
+Worker 033: Loading Warehouse   1177
+Worker 032: Loading Warehouse   1118 done
+Worker 032: Loading Warehouse   1178
+Worker 047: Loading Warehouse   1119 done
+Worker 047: Loading Warehouse   1179
+Worker 010: Loading Warehouse   1121 done
+Worker 010: Loading Warehouse   1180
+Worker 055: Loading Warehouse   1116 done
+Worker 055: Loading Warehouse   1181
+Worker 035: Loading Warehouse   1122 done
+Worker 035: Loading Warehouse   1182
+Worker 052: Loading Warehouse   1125 done
+Worker 052: Loading Warehouse   1183
+Worker 042: Loading Warehouse   1123 done
+Worker 042: Loading Warehouse   1184
+Worker 058: Loading Warehouse   1126 done
+Worker 058: Loading Warehouse   1185
+Worker 022: Loading Warehouse   1129 done
+Worker 022: Loading Warehouse   1186
+Worker 051: Loading Warehouse   1127 done
+Worker 051: Loading Warehouse   1187
+Worker 021: Loading Warehouse   1128 done
+Worker 021: Loading Warehouse   1188
+Worker 049: Loading Warehouse   1124 done
+Worker 049: Loading Warehouse   1189
+Worker 008: Loading Warehouse   1131 done
+Worker 008: Loading Warehouse   1190
+Worker 048: Loading Warehouse   1130 done
+Worker 048: Loading Warehouse   1191
+Worker 016: Loading Warehouse   1132 done
+Worker 016: Loading Warehouse   1192
+Worker 053: Loading Warehouse   1133 done
+Worker 053: Loading Warehouse   1193
+Worker 017: Loading Warehouse   1134 done
+Worker 017: Loading Warehouse   1194
+Worker 050: Loading Warehouse   1135 done
+Worker 050: Loading Warehouse   1195
+Worker 037: Loading Warehouse   1136 done
+Worker 037: Loading Warehouse   1196
+Worker 038: Loading Warehouse   1138 done
+Worker 038: Loading Warehouse   1197
+Worker 043: Loading Warehouse   1139 done
+Worker 043: Loading Warehouse   1198
+Worker 041: Loading Warehouse   1137 done
+Worker 041: Loading Warehouse   1199
+Worker 045: Loading Warehouse   1140 done
+Worker 045: Loading Warehouse   1200
+Worker 002: Loading Warehouse   1143 done
+Worker 002: Loading Warehouse   1201
+Worker 011: Loading Warehouse   1144 done
+Worker 011: Loading Warehouse   1202
+Worker 024: Loading Warehouse   1141 done
+Worker 024: Loading Warehouse   1203
+Worker 005: Loading Warehouse   1142 done
+Worker 005: Loading Warehouse   1204
+Worker 006: Loading Warehouse   1146 done
+Worker 006: Loading Warehouse   1205
+Worker 007: Loading Warehouse   1145 done
+Worker 007: Loading Warehouse   1206
+Worker 012: Loading Warehouse   1148 done
+Worker 012: Loading Warehouse   1207
+Worker 014: Loading Warehouse   1147 done
+Worker 014: Loading Warehouse   1208
+Worker 004: Loading Warehouse   1149 done
+Worker 004: Loading Warehouse   1209
+Worker 009: Loading Warehouse   1152 done
+Worker 009: Loading Warehouse   1210
+Worker 046: Loading Warehouse   1150 done
+Worker 046: Loading Warehouse   1211
+Worker 003: Loading Warehouse   1151 done
+Worker 003: Loading Warehouse   1212
+Worker 027: Loading Warehouse   1154 done
+Worker 027: Loading Warehouse   1213
+Worker 020: Loading Warehouse   1153 done
+Worker 020: Loading Warehouse   1214
+Worker 028: Loading Warehouse   1155 done
+Worker 028: Loading Warehouse   1215
+Worker 001: Loading Warehouse   1156 done
+Worker 001: Loading Warehouse   1216
+Worker 013: Loading Warehouse   1157 done
+Worker 013: Loading Warehouse   1217
+Worker 000: Loading Warehouse   1158 done
+Worker 000: Loading Warehouse   1218
+Worker 015: Loading Warehouse   1160 done
+Worker 015: Loading Warehouse   1219
+Worker 039: Loading Warehouse   1161 done
+Worker 039: Loading Warehouse   1220
+Worker 031: Loading Warehouse   1163 done
+Worker 031: Loading Warehouse   1221
+Worker 036: Loading Warehouse   1159 done
+Worker 036: Loading Warehouse   1222
+Worker 023: Loading Warehouse   1162 done
+Worker 023: Loading Warehouse   1223
+Worker 026: Loading Warehouse   1165 done
+Worker 026: Loading Warehouse   1224
+Worker 034: Loading Warehouse   1164 done
+Worker 034: Loading Warehouse   1225
+Worker 056: Loading Warehouse   1167 done
+Worker 056: Loading Warehouse   1226
+Worker 030: Loading Warehouse   1166 done
+Worker 030: Loading Warehouse   1227
+Worker 044: Loading Warehouse   1168 done
+Worker 044: Loading Warehouse   1228
+Worker 057: Loading Warehouse   1169 done
+Worker 057: Loading Warehouse   1229
+Worker 040: Loading Warehouse   1170 done
+Worker 040: Loading Warehouse   1230
+Worker 018: Loading Warehouse   1171 done
+Worker 018: Loading Warehouse   1231
+Worker 054: Loading Warehouse   1172 done
+Worker 054: Loading Warehouse   1232
+Worker 059: Loading Warehouse   1173 done
+Worker 059: Loading Warehouse   1233
+Worker 033: Loading Warehouse   1177 done
+Worker 033: Loading Warehouse   1234
+Worker 025: Loading Warehouse   1176 done
+Worker 025: Loading Warehouse   1235
+Worker 029: Loading Warehouse   1174 done
+Worker 029: Loading Warehouse   1236
+Worker 032: Loading Warehouse   1178 done
+Worker 032: Loading Warehouse   1237
+Worker 019: Loading Warehouse   1175 done
+Worker 019: Loading Warehouse   1238
+Worker 047: Loading Warehouse   1179 done
+Worker 047: Loading Warehouse   1239
+Worker 055: Loading Warehouse   1181 done
+Worker 055: Loading Warehouse   1240
+Worker 010: Loading Warehouse   1180 done
+Worker 010: Loading Warehouse   1241
+Worker 035: Loading Warehouse   1182 done
+Worker 035: Loading Warehouse   1242
+Worker 042: Loading Warehouse   1184 done
+Worker 042: Loading Warehouse   1243
+Worker 058: Loading Warehouse   1185 done
+Worker 058: Loading Warehouse   1244
+Worker 052: Loading Warehouse   1183 done
+Worker 052: Loading Warehouse   1245
+Worker 008: Loading Warehouse   1190 done
+Worker 008: Loading Warehouse   1246
+Worker 016: Loading Warehouse   1192 done
+Worker 016: Loading Warehouse   1247
+Worker 022: Loading Warehouse   1186 done
+Worker 022: Loading Warehouse   1248
+Worker 021: Loading Warehouse   1188 done
+Worker 021: Loading Warehouse   1249
+Worker 048: Loading Warehouse   1191 done
+Worker 048: Loading Warehouse   1250
+Worker 049: Loading Warehouse   1189 done
+Worker 049: Loading Warehouse   1251
+Worker 017: Loading Warehouse   1194 done
+Worker 017: Loading Warehouse   1252
+Worker 051: Loading Warehouse   1187 done
+Worker 051: Loading Warehouse   1253
+Worker 053: Loading Warehouse   1193 done
+Worker 053: Loading Warehouse   1254
+Worker 050: Loading Warehouse   1195 done
+Worker 050: Loading Warehouse   1255
+Worker 037: Loading Warehouse   1196 done
+Worker 037: Loading Warehouse   1256
+Worker 038: Loading Warehouse   1197 done
+Worker 038: Loading Warehouse   1257
+Worker 041: Loading Warehouse   1199 done
+Worker 041: Loading Warehouse   1258
+Worker 043: Loading Warehouse   1198 done
+Worker 043: Loading Warehouse   1259
+Worker 045: Loading Warehouse   1200 done
+Worker 045: Loading Warehouse   1260
+Worker 005: Loading Warehouse   1204 done
+Worker 005: Loading Warehouse   1261
+Worker 002: Loading Warehouse   1201 done
+Worker 002: Loading Warehouse   1262
+Worker 011: Loading Warehouse   1202 done
+Worker 011: Loading Warehouse   1263
+Worker 024: Loading Warehouse   1203 done
+Worker 024: Loading Warehouse   1264
+Worker 006: Loading Warehouse   1205 done
+Worker 006: Loading Warehouse   1265
+Worker 007: Loading Warehouse   1206 done
+Worker 007: Loading Warehouse   1266
+Worker 014: Loading Warehouse   1208 done
+Worker 014: Loading Warehouse   1267
+Worker 012: Loading Warehouse   1207 done
+Worker 012: Loading Warehouse   1268
+Worker 004: Loading Warehouse   1209 done
+Worker 004: Loading Warehouse   1269
+Worker 046: Loading Warehouse   1211 done
+Worker 046: Loading Warehouse   1270
+Worker 027: Loading Warehouse   1213 done
+Worker 027: Loading Warehouse   1271
+Worker 003: Loading Warehouse   1212 done
+Worker 003: Loading Warehouse   1272
+Worker 009: Loading Warehouse   1210 done
+Worker 009: Loading Warehouse   1273
+Worker 020: Loading Warehouse   1214 done
+Worker 020: Loading Warehouse   1274
+Worker 028: Loading Warehouse   1215 done
+Worker 028: Loading Warehouse   1275
+Worker 001: Loading Warehouse   1216 done
+Worker 001: Loading Warehouse   1276
+Worker 015: Loading Warehouse   1219 done
+Worker 015: Loading Warehouse   1277
+Worker 013: Loading Warehouse   1217 done
+Worker 013: Loading Warehouse   1278
+Worker 000: Loading Warehouse   1218 done
+Worker 000: Loading Warehouse   1279
+Worker 039: Loading Warehouse   1220 done
+Worker 039: Loading Warehouse   1280
+Worker 023: Loading Warehouse   1223 done
+Worker 023: Loading Warehouse   1281
+Worker 031: Loading Warehouse   1221 done
+Worker 031: Loading Warehouse   1282
+Worker 026: Loading Warehouse   1224 done
+Worker 026: Loading Warehouse   1283
+Worker 036: Loading Warehouse   1222 done
+Worker 036: Loading Warehouse   1284
+Worker 034: Loading Warehouse   1225 done
+Worker 034: Loading Warehouse   1285
+Worker 044: Loading Warehouse   1228 done
+Worker 044: Loading Warehouse   1286
+Worker 057: Loading Warehouse   1229 done
+Worker 057: Loading Warehouse   1287
+Worker 030: Loading Warehouse   1227 done
+Worker 030: Loading Warehouse   1288
+Worker 056: Loading Warehouse   1226 done
+Worker 056: Loading Warehouse   1289
+Worker 059: Loading Warehouse   1233 done
+Worker 059: Loading Warehouse   1290
+Worker 018: Loading Warehouse   1231 done
+Worker 018: Loading Warehouse   1291
+Worker 033: Loading Warehouse   1234 done
+Worker 033: Loading Warehouse   1292
+Worker 040: Loading Warehouse   1230 done
+Worker 040: Loading Warehouse   1293
+Worker 054: Loading Warehouse   1232 done
+Worker 054: Loading Warehouse   1294
+Worker 025: Loading Warehouse   1235 done
+Worker 025: Loading Warehouse   1295
+Worker 029: Loading Warehouse   1236 done
+Worker 029: Loading Warehouse   1296
+Worker 055: Loading Warehouse   1240 done
+Worker 055: Loading Warehouse   1297
+Worker 032: Loading Warehouse   1237 done
+Worker 032: Loading Warehouse   1298
+Worker 047: Loading Warehouse   1239 done
+Worker 047: Loading Warehouse   1299
+Worker 019: Loading Warehouse   1238 done
+Worker 019: Loading Warehouse   1300
+Worker 010: Loading Warehouse   1241 done
+Worker 010: Loading Warehouse   1301
+Worker 008: Loading Warehouse   1246 done
+Worker 008: Loading Warehouse   1302
+Worker 035: Loading Warehouse   1242 done
+Worker 035: Loading Warehouse   1303
+Worker 042: Loading Warehouse   1243 done
+Worker 042: Loading Warehouse   1304
+Worker 021: Loading Warehouse   1249 done
+Worker 021: Loading Warehouse   1305
+Worker 058: Loading Warehouse   1244 done
+Worker 058: Loading Warehouse   1306
+Worker 022: Loading Warehouse   1248 done
+Worker 022: Loading Warehouse   1307
+Worker 016: Loading Warehouse   1247 done
+Worker 016: Loading Warehouse   1308
+Worker 052: Loading Warehouse   1245 done
+Worker 052: Loading Warehouse   1309
+Worker 017: Loading Warehouse   1252 done
+Worker 017: Loading Warehouse   1310
+Worker 049: Loading Warehouse   1251 done
+Worker 049: Loading Warehouse   1311
+Worker 051: Loading Warehouse   1253 done
+Worker 051: Loading Warehouse   1312
+Worker 048: Loading Warehouse   1250 done
+Worker 048: Loading Warehouse   1313
+Worker 037: Loading Warehouse   1256 done
+Worker 037: Loading Warehouse   1314
+Worker 050: Loading Warehouse   1255 done
+Worker 050: Loading Warehouse   1315
+Worker 038: Loading Warehouse   1257 done
+Worker 038: Loading Warehouse   1316
+Worker 053: Loading Warehouse   1254 done
+Worker 053: Loading Warehouse   1317
+Worker 041: Loading Warehouse   1258 done
+Worker 041: Loading Warehouse   1318
+Worker 043: Loading Warehouse   1259 done
+Worker 043: Loading Warehouse   1319
+Worker 045: Loading Warehouse   1260 done
+Worker 045: Loading Warehouse   1320
+Worker 002: Loading Warehouse   1262 done
+Worker 002: Loading Warehouse   1321
+Worker 005: Loading Warehouse   1261 done
+Worker 005: Loading Warehouse   1322
+Worker 006: Loading Warehouse   1265 done
+Worker 006: Loading Warehouse   1323
+Worker 024: Loading Warehouse   1264 done
+Worker 024: Loading Warehouse   1324
+Worker 011: Loading Warehouse   1263 done
+Worker 011: Loading Warehouse   1325
+Worker 007: Loading Warehouse   1266 done
+Worker 007: Loading Warehouse   1326
+Worker 014: Loading Warehouse   1267 done
+Worker 014: Loading Warehouse   1327
+Worker 004: Loading Warehouse   1269 done
+Worker 004: Loading Warehouse   1328
+Worker 046: Loading Warehouse   1270 done
+Worker 046: Loading Warehouse   1329
+Worker 012: Loading Warehouse   1268 done
+Worker 012: Loading Warehouse   1330
+Worker 027: Loading Warehouse   1271 done
+Worker 027: Loading Warehouse   1331
+Worker 003: Loading Warehouse   1272 done
+Worker 003: Loading Warehouse   1332
+Worker 009: Loading Warehouse   1273 done
+Worker 009: Loading Warehouse   1333
+Worker 020: Loading Warehouse   1274 done
+Worker 020: Loading Warehouse   1334
+Worker 028: Loading Warehouse   1275 done
+Worker 028: Loading Warehouse   1335
+Worker 015: Loading Warehouse   1277 done
+Worker 015: Loading Warehouse   1336
+Worker 001: Loading Warehouse   1276 done
+Worker 001: Loading Warehouse   1337
+Worker 013: Loading Warehouse   1278 done
+Worker 013: Loading Warehouse   1338
+Worker 000: Loading Warehouse   1279 done
+Worker 000: Loading Warehouse   1339
+Worker 039: Loading Warehouse   1280 done
+Worker 039: Loading Warehouse   1340
+Worker 031: Loading Warehouse   1282 done
+Worker 031: Loading Warehouse   1341
+Worker 023: Loading Warehouse   1281 done
+Worker 023: Loading Warehouse   1342
+Worker 036: Loading Warehouse   1284 done
+Worker 036: Loading Warehouse   1343
+Worker 026: Loading Warehouse   1283 done
+Worker 026: Loading Warehouse   1344
+Worker 034: Loading Warehouse   1285 done
+Worker 034: Loading Warehouse   1345
+Worker 044: Loading Warehouse   1286 done
+Worker 044: Loading Warehouse   1346
+Worker 057: Loading Warehouse   1287 done
+Worker 057: Loading Warehouse   1347
+Worker 056: Loading Warehouse   1289 done
+Worker 056: Loading Warehouse   1348
+Worker 059: Loading Warehouse   1290 done
+Worker 059: Loading Warehouse   1349
+Worker 030: Loading Warehouse   1288 done
+Worker 030: Loading Warehouse   1350
+Worker 018: Loading Warehouse   1291 done
+Worker 018: Loading Warehouse   1351
+Worker 040: Loading Warehouse   1293 done
+Worker 040: Loading Warehouse   1352
+Worker 033: Loading Warehouse   1292 done
+Worker 033: Loading Warehouse   1353
+Worker 025: Loading Warehouse   1295 done
+Worker 025: Loading Warehouse   1354
+Worker 054: Loading Warehouse   1294 done
+Worker 054: Loading Warehouse   1355
+Worker 029: Loading Warehouse   1296 done
+Worker 029: Loading Warehouse   1356
+Worker 010: Loading Warehouse   1301 done
+Worker 010: Loading Warehouse   1357
+Worker 047: Loading Warehouse   1299 done
+Worker 047: Loading Warehouse   1358
+Worker 032: Loading Warehouse   1298 done
+Worker 032: Loading Warehouse   1359
+Worker 055: Loading Warehouse   1297 done
+Worker 055: Loading Warehouse   1360
+Worker 008: Loading Warehouse   1302 done
+Worker 008: Loading Warehouse   1361
+Worker 042: Loading Warehouse   1304 done
+Worker 042: Loading Warehouse   1362
+Worker 019: Loading Warehouse   1300 done
+Worker 019: Loading Warehouse   1363
+Worker 035: Loading Warehouse   1303 done
+Worker 035: Loading Warehouse   1364
+Worker 016: Loading Warehouse   1308 done
+Worker 016: Loading Warehouse   1365
+Worker 058: Loading Warehouse   1306 done
+Worker 058: Loading Warehouse   1366
+Worker 021: Loading Warehouse   1305 done
+Worker 021: Loading Warehouse   1367
+Worker 052: Loading Warehouse   1309 done
+Worker 052: Loading Warehouse   1368
+Worker 017: Loading Warehouse   1310 done
+Worker 017: Loading Warehouse   1369
+Worker 022: Loading Warehouse   1307 done
+Worker 022: Loading Warehouse   1370
+Worker 051: Loading Warehouse   1312 done
+Worker 051: Loading Warehouse   1371
+Worker 049: Loading Warehouse   1311 done
+Worker 049: Loading Warehouse   1372
+Worker 048: Loading Warehouse   1313 done
+Worker 048: Loading Warehouse   1373
+Worker 038: Loading Warehouse   1316 done
+Worker 038: Loading Warehouse   1374
+Worker 037: Loading Warehouse   1314 done
+Worker 037: Loading Warehouse   1375
+Worker 050: Loading Warehouse   1315 done
+Worker 050: Loading Warehouse   1376
+Worker 053: Loading Warehouse   1317 done
+Worker 053: Loading Warehouse   1377
+Worker 041: Loading Warehouse   1318 done
+Worker 041: Loading Warehouse   1378
+Worker 043: Loading Warehouse   1319 done
+Worker 043: Loading Warehouse   1379
+Worker 045: Loading Warehouse   1320 done
+Worker 045: Loading Warehouse   1380
+Worker 002: Loading Warehouse   1321 done
+Worker 002: Loading Warehouse   1381
+Worker 005: Loading Warehouse   1322 done
+Worker 005: Loading Warehouse   1382
+Worker 006: Loading Warehouse   1323 done
+Worker 006: Loading Warehouse   1383
+Worker 024: Loading Warehouse   1324 done
+Worker 024: Loading Warehouse   1384
+Worker 011: Loading Warehouse   1325 done
+Worker 011: Loading Warehouse   1385
+Worker 007: Loading Warehouse   1326 done
+Worker 007: Loading Warehouse   1386
+Worker 046: Loading Warehouse   1329 done
+Worker 046: Loading Warehouse   1387
+Worker 014: Loading Warehouse   1327 done
+Worker 014: Loading Warehouse   1388
+Worker 004: Loading Warehouse   1328 done
+Worker 004: Loading Warehouse   1389
+Worker 027: Loading Warehouse   1331 done
+Worker 027: Loading Warehouse   1390
+Worker 012: Loading Warehouse   1330 done
+Worker 012: Loading Warehouse   1391
+Worker 020: Loading Warehouse   1334 done
+Worker 020: Loading Warehouse   1392
+Worker 003: Loading Warehouse   1332 done
+Worker 003: Loading Warehouse   1393
+Worker 009: Loading Warehouse   1333 done
+Worker 009: Loading Warehouse   1394
+Worker 015: Loading Warehouse   1336 done
+Worker 015: Loading Warehouse   1395
+Worker 028: Loading Warehouse   1335 done
+Worker 028: Loading Warehouse   1396
+Worker 001: Loading Warehouse   1337 done
+Worker 001: Loading Warehouse   1397
+Worker 031: Loading Warehouse   1341 done
+Worker 031: Loading Warehouse   1398
+Worker 013: Loading Warehouse   1338 done
+Worker 013: Loading Warehouse   1399
+Worker 039: Loading Warehouse   1340 done
+Worker 039: Loading Warehouse   1400
+Worker 000: Loading Warehouse   1339 done
+Worker 000: Loading Warehouse   1401
+Worker 023: Loading Warehouse   1342 done
+Worker 023: Loading Warehouse   1402
+Worker 036: Loading Warehouse   1343 done
+Worker 036: Loading Warehouse   1403
+Worker 026: Loading Warehouse   1344 done
+Worker 026: Loading Warehouse   1404
+Worker 034: Loading Warehouse   1345 done
+Worker 034: Loading Warehouse   1405
+Worker 057: Loading Warehouse   1347 done
+Worker 057: Loading Warehouse   1406
+Worker 044: Loading Warehouse   1346 done
+Worker 044: Loading Warehouse   1407
+Worker 056: Loading Warehouse   1348 done
+Worker 056: Loading Warehouse   1408
+Worker 059: Loading Warehouse   1349 done
+Worker 059: Loading Warehouse   1409
+Worker 018: Loading Warehouse   1351 done
+Worker 018: Loading Warehouse   1410
+Worker 030: Loading Warehouse   1350 done
+Worker 030: Loading Warehouse   1411
+Worker 040: Loading Warehouse   1352 done
+Worker 040: Loading Warehouse   1412
+Worker 054: Loading Warehouse   1355 done
+Worker 054: Loading Warehouse   1413
+Worker 033: Loading Warehouse   1353 done
+Worker 033: Loading Warehouse   1414
+Worker 025: Loading Warehouse   1354 done
+Worker 025: Loading Warehouse   1415
+Worker 032: Loading Warehouse   1359 done
+Worker 032: Loading Warehouse   1416
+Worker 047: Loading Warehouse   1358 done
+Worker 047: Loading Warehouse   1417
+Worker 010: Loading Warehouse   1357 done
+Worker 010: Loading Warehouse   1418
+Worker 029: Loading Warehouse   1356 done
+Worker 029: Loading Warehouse   1419
+Worker 055: Loading Warehouse   1360 done
+Worker 055: Loading Warehouse   1420
+Worker 008: Loading Warehouse   1361 done
+Worker 008: Loading Warehouse   1421
+Worker 019: Loading Warehouse   1363 done
+Worker 019: Loading Warehouse   1422
+Worker 042: Loading Warehouse   1362 done
+Worker 042: Loading Warehouse   1423
+Worker 016: Loading Warehouse   1365 done
+Worker 016: Loading Warehouse   1424
+Worker 017: Loading Warehouse   1369 done
+Worker 017: Loading Warehouse   1425
+Worker 052: Loading Warehouse   1368 done
+Worker 052: Loading Warehouse   1426
+Worker 021: Loading Warehouse   1367 done
+Worker 021: Loading Warehouse   1427
+Worker 022: Loading Warehouse   1370 done
+Worker 022: Loading Warehouse   1428
+Worker 049: Loading Warehouse   1372 done
+Worker 049: Loading Warehouse   1429
+Worker 058: Loading Warehouse   1366 done
+Worker 058: Loading Warehouse   1430
+Worker 051: Loading Warehouse   1371 done
+Worker 051: Loading Warehouse   1431
+Worker 035: Loading Warehouse   1364 done
+Worker 035: Loading Warehouse   1432
+Worker 048: Loading Warehouse   1373 done
+Worker 048: Loading Warehouse   1433
+Worker 050: Loading Warehouse   1376 done
+Worker 050: Loading Warehouse   1434
+Worker 038: Loading Warehouse   1374 done
+Worker 038: Loading Warehouse   1435
+Worker 037: Loading Warehouse   1375 done
+Worker 037: Loading Warehouse   1436
+Worker 053: Loading Warehouse   1377 done
+Worker 053: Loading Warehouse   1437
+Worker 043: Loading Warehouse   1379 done
+Worker 043: Loading Warehouse   1438
+Worker 041: Loading Warehouse   1378 done
+Worker 041: Loading Warehouse   1439
+Worker 045: Loading Warehouse   1380 done
+Worker 045: Loading Warehouse   1440
+Worker 002: Loading Warehouse   1381 done
+Worker 002: Loading Warehouse   1441
+Worker 005: Loading Warehouse   1382 done
+Worker 005: Loading Warehouse   1442
+Worker 006: Loading Warehouse   1383 done
+Worker 006: Loading Warehouse   1443
+Worker 011: Loading Warehouse   1385 done
+Worker 011: Loading Warehouse   1444
+Worker 024: Loading Warehouse   1384 done
+Worker 024: Loading Warehouse   1445
+Worker 007: Loading Warehouse   1386 done
+Worker 007: Loading Warehouse   1446
+Worker 046: Loading Warehouse   1387 done
+Worker 046: Loading Warehouse   1447
+Worker 027: Loading Warehouse   1390 done
+Worker 027: Loading Warehouse   1448
+Worker 004: Loading Warehouse   1389 done
+Worker 004: Loading Warehouse   1449
+Worker 014: Loading Warehouse   1388 done
+Worker 014: Loading Warehouse   1450
+Worker 020: Loading Warehouse   1392 done
+Worker 020: Loading Warehouse   1451
+Worker 012: Loading Warehouse   1391 done
+Worker 012: Loading Warehouse   1452
+Worker 015: Loading Warehouse   1395 done
+Worker 015: Loading Warehouse   1453
+Worker 003: Loading Warehouse   1393 done
+Worker 003: Loading Warehouse   1454
+Worker 009: Loading Warehouse   1394 done
+Worker 009: Loading Warehouse   1455
+Worker 028: Loading Warehouse   1396 done
+Worker 028: Loading Warehouse   1456
+Worker 031: Loading Warehouse   1398 done
+Worker 031: Loading Warehouse   1457
+Worker 013: Loading Warehouse   1399 done
+Worker 013: Loading Warehouse   1458
+Worker 001: Loading Warehouse   1397 done
+Worker 001: Loading Warehouse   1459
+Worker 000: Loading Warehouse   1401 done
+Worker 000: Loading Warehouse   1460
+Worker 039: Loading Warehouse   1400 done
+Worker 039: Loading Warehouse   1461
+Worker 023: Loading Warehouse   1402 done
+Worker 023: Loading Warehouse   1462
+Worker 034: Loading Warehouse   1405 done
+Worker 034: Loading Warehouse   1463
+Worker 036: Loading Warehouse   1403 done
+Worker 036: Loading Warehouse   1464
+Worker 044: Loading Warehouse   1407 done
+Worker 044: Loading Warehouse   1465
+Worker 026: Loading Warehouse   1404 done
+Worker 026: Loading Warehouse   1466
+Worker 057: Loading Warehouse   1406 done
+Worker 057: Loading Warehouse   1467
+Worker 018: Loading Warehouse   1410 done
+Worker 018: Loading Warehouse   1468
+Worker 056: Loading Warehouse   1408 done
+Worker 056: Loading Warehouse   1469
+Worker 059: Loading Warehouse   1409 done
+Worker 059: Loading Warehouse   1470
+Worker 033: Loading Warehouse   1414 done
+Worker 033: Loading Warehouse   1471
+Worker 030: Loading Warehouse   1411 done
+Worker 030: Loading Warehouse   1472
+Worker 040: Loading Warehouse   1412 done
+Worker 040: Loading Warehouse   1473
+Worker 032: Loading Warehouse   1416 done
+Worker 032: Loading Warehouse   1474
+Worker 054: Loading Warehouse   1413 done
+Worker 054: Loading Warehouse   1475
+Worker 047: Loading Warehouse   1417 done
+Worker 047: Loading Warehouse   1476
+Worker 010: Loading Warehouse   1418 done
+Worker 010: Loading Warehouse   1477
+Worker 055: Loading Warehouse   1420 done
+Worker 055: Loading Warehouse   1478
+Worker 025: Loading Warehouse   1415 done
+Worker 025: Loading Warehouse   1479
+Worker 008: Loading Warehouse   1421 done
+Worker 008: Loading Warehouse   1480
+Worker 019: Loading Warehouse   1422 done
+Worker 019: Loading Warehouse   1481
+Worker 029: Loading Warehouse   1419 done
+Worker 029: Loading Warehouse   1482
+Worker 017: Loading Warehouse   1425 done
+Worker 017: Loading Warehouse   1483
+Worker 042: Loading Warehouse   1423 done
+Worker 042: Loading Warehouse   1484
+Worker 052: Loading Warehouse   1426 done
+Worker 052: Loading Warehouse   1485
+Worker 022: Loading Warehouse   1428 done
+Worker 022: Loading Warehouse   1486
+Worker 016: Loading Warehouse   1424 done
+Worker 016: Loading Warehouse   1487
+Worker 058: Loading Warehouse   1430 done
+Worker 058: Loading Warehouse   1488
+Worker 021: Loading Warehouse   1427 done
+Worker 021: Loading Warehouse   1489
+Worker 035: Loading Warehouse   1432 done
+Worker 035: Loading Warehouse   1490
+Worker 048: Loading Warehouse   1433 done
+Worker 048: Loading Warehouse   1491
+Worker 051: Loading Warehouse   1431 done
+Worker 051: Loading Warehouse   1492
+Worker 049: Loading Warehouse   1429 done
+Worker 049: Loading Warehouse   1493
+Worker 053: Loading Warehouse   1437 done
+Worker 053: Loading Warehouse   1494
+Worker 050: Loading Warehouse   1434 done
+Worker 050: Loading Warehouse   1495
+Worker 037: Loading Warehouse   1436 done
+Worker 037: Loading Warehouse   1496
+Worker 043: Loading Warehouse   1438 done
+Worker 043: Loading Warehouse   1497
+Worker 041: Loading Warehouse   1439 done
+Worker 041: Loading Warehouse   1498
+Worker 038: Loading Warehouse   1435 done
+Worker 038: Loading Warehouse   1499
+Worker 045: Loading Warehouse   1440 done
+Worker 045: Loading Warehouse   1500
+Worker 005: Loading Warehouse   1442 done
+Worker 005: Loading Warehouse   1501
+Worker 006: Loading Warehouse   1443 done
+Worker 006: Loading Warehouse   1502
+Worker 002: Loading Warehouse   1441 done
+Worker 002: Loading Warehouse   1503
+Worker 011: Loading Warehouse   1444 done
+Worker 011: Loading Warehouse   1504
+Worker 007: Loading Warehouse   1446 done
+Worker 007: Loading Warehouse   1505
+Worker 024: Loading Warehouse   1445 done
+Worker 024: Loading Warehouse   1506
+Worker 027: Loading Warehouse   1448 done
+Worker 027: Loading Warehouse   1507
+Worker 046: Loading Warehouse   1447 done
+Worker 046: Loading Warehouse   1508
+Worker 004: Loading Warehouse   1449 done
+Worker 004: Loading Warehouse   1509
+Worker 014: Loading Warehouse   1450 done
+Worker 014: Loading Warehouse   1510
+Worker 003: Loading Warehouse   1454 done
+Worker 003: Loading Warehouse   1511
+Worker 020: Loading Warehouse   1451 done
+Worker 020: Loading Warehouse   1512
+Worker 012: Loading Warehouse   1452 done
+Worker 012: Loading Warehouse   1513
+Worker 009: Loading Warehouse   1455 done
+Worker 009: Loading Warehouse   1514
+Worker 028: Loading Warehouse   1456 done
+Worker 028: Loading Warehouse   1515
+Worker 015: Loading Warehouse   1453 done
+Worker 015: Loading Warehouse   1516
+Worker 001: Loading Warehouse   1459 done
+Worker 001: Loading Warehouse   1517
+Worker 013: Loading Warehouse   1458 done
+Worker 013: Loading Warehouse   1518
+Worker 031: Loading Warehouse   1457 done
+Worker 031: Loading Warehouse   1519
+Worker 000: Loading Warehouse   1460 done
+Worker 000: Loading Warehouse   1520
+Worker 039: Loading Warehouse   1461 done
+Worker 039: Loading Warehouse   1521
+Worker 034: Loading Warehouse   1463 done
+Worker 034: Loading Warehouse   1522
+Worker 023: Loading Warehouse   1462 done
+Worker 023: Loading Warehouse   1523
+Worker 026: Loading Warehouse   1466 done
+Worker 026: Loading Warehouse   1524
+Worker 044: Loading Warehouse   1465 done
+Worker 044: Loading Warehouse   1525
+Worker 036: Loading Warehouse   1464 done
+Worker 036: Loading Warehouse   1526
+Worker 057: Loading Warehouse   1467 done
+Worker 057: Loading Warehouse   1527
+Worker 033: Loading Warehouse   1471 done
+Worker 033: Loading Warehouse   1528
+Worker 059: Loading Warehouse   1470 done
+Worker 059: Loading Warehouse   1529
+Worker 054: Loading Warehouse   1475 done
+Worker 054: Loading Warehouse   1530
+Worker 056: Loading Warehouse   1469 done
+Worker 056: Loading Warehouse   1531
+Worker 018: Loading Warehouse   1468 done
+Worker 018: Loading Warehouse   1532
+Worker 030: Loading Warehouse   1472 done
+Worker 030: Loading Warehouse   1533
+Worker 040: Loading Warehouse   1473 done
+Worker 040: Loading Warehouse   1534
+Worker 047: Loading Warehouse   1476 done
+Worker 047: Loading Warehouse   1535
+Worker 055: Loading Warehouse   1478 done
+Worker 055: Loading Warehouse   1536
+Worker 025: Loading Warehouse   1479 done
+Worker 025: Loading Warehouse   1537
+Worker 032: Loading Warehouse   1474 done
+Worker 032: Loading Warehouse   1538
+Worker 010: Loading Warehouse   1477 done
+Worker 010: Loading Warehouse   1539
+Worker 029: Loading Warehouse   1482 done
+Worker 022: Loading Warehouse   1486 done
+Worker 029: Loading Warehouse   1540
+Worker 022: Loading Warehouse   1541
+Worker 052: Loading Warehouse   1485 done
+Worker 052: Loading Warehouse   1542
+Worker 042: Loading Warehouse   1484 done
+Worker 042: Loading Warehouse   1543
+Worker 008: Loading Warehouse   1480 done
+Worker 008: Loading Warehouse   1544
+Worker 019: Loading Warehouse   1481 done
+Worker 019: Loading Warehouse   1545
+Worker 017: Loading Warehouse   1483 done
+Worker 017: Loading Warehouse   1546
+Worker 058: Loading Warehouse   1488 done
+Worker 058: Loading Warehouse   1547
+Worker 035: Loading Warehouse   1490 done
+Worker 035: Loading Warehouse   1548
+Worker 016: Loading Warehouse   1487 done
+Worker 016: Loading Warehouse   1549
+Worker 021: Loading Warehouse   1489 done
+Worker 021: Loading Warehouse   1550
+Worker 051: Loading Warehouse   1492 done
+Worker 051: Loading Warehouse   1551
+Worker 048: Loading Warehouse   1491 done
+Worker 048: Loading Warehouse   1552
+Worker 049: Loading Warehouse   1493 done
+Worker 049: Loading Warehouse   1553
+Worker 037: Loading Warehouse   1496 done
+Worker 037: Loading Warehouse   1554
+Worker 053: Loading Warehouse   1494 done
+Worker 053: Loading Warehouse   1555
+Worker 050: Loading Warehouse   1495 done
+Worker 050: Loading Warehouse   1556
+Worker 043: Loading Warehouse   1497 done
+Worker 043: Loading Warehouse   1557
+Worker 041: Loading Warehouse   1498 done
+Worker 041: Loading Warehouse   1558
+Worker 038: Loading Warehouse   1499 done
+Worker 038: Loading Warehouse   1559
+Worker 045: Loading Warehouse   1500 done
+Worker 045: Loading Warehouse   1560
+Worker 005: Loading Warehouse   1501 done
+Worker 005: Loading Warehouse   1561
+Worker 002: Loading Warehouse   1503 done
+Worker 002: Loading Warehouse   1562
+Worker 006: Loading Warehouse   1502 done
+Worker 006: Loading Warehouse   1563
+Worker 007: Loading Warehouse   1505 done
+Worker 007: Loading Warehouse   1564
+Worker 011: Loading Warehouse   1504 done
+Worker 011: Loading Warehouse   1565
+Worker 024: Loading Warehouse   1506 done
+Worker 024: Loading Warehouse   1566
+Worker 046: Loading Warehouse   1508 done
+Worker 046: Loading Warehouse   1567
+Worker 027: Loading Warehouse   1507 done
+Worker 027: Loading Warehouse   1568
+Worker 014: Loading Warehouse   1510 done
+Worker 014: Loading Warehouse   1569
+Worker 004: Loading Warehouse   1509 done
+Worker 004: Loading Warehouse   1570
+Worker 020: Loading Warehouse   1512 done
+Worker 020: Loading Warehouse   1571
+Worker 012: Loading Warehouse   1513 done
+Worker 012: Loading Warehouse   1572
+Worker 003: Loading Warehouse   1511 done
+Worker 003: Loading Warehouse   1573
+Worker 015: Loading Warehouse   1516 done
+Worker 015: Loading Warehouse   1574
+Worker 009: Loading Warehouse   1514 done
+Worker 009: Loading Warehouse   1575
+Worker 001: Loading Warehouse   1517 done
+Worker 001: Loading Warehouse   1576
+Worker 028: Loading Warehouse   1515 done
+Worker 028: Loading Warehouse   1577
+Worker 031: Loading Warehouse   1519 done
+Worker 031: Loading Warehouse   1578
+Worker 013: Loading Warehouse   1518 done
+Worker 013: Loading Warehouse   1579
+Worker 000: Loading Warehouse   1520 done
+Worker 000: Loading Warehouse   1580
+Worker 039: Loading Warehouse   1521 done
+Worker 039: Loading Warehouse   1581
+Worker 044: Loading Warehouse   1525 done
+Worker 044: Loading Warehouse   1582
+Worker 023: Loading Warehouse   1523 done
+Worker 023: Loading Warehouse   1583
+Worker 026: Loading Warehouse   1524 done
+Worker 026: Loading Warehouse   1584
+Worker 036: Loading Warehouse   1526 done
+Worker 036: Loading Warehouse   1585
+Worker 034: Loading Warehouse   1522 done
+Worker 034: Loading Warehouse   1586
+Worker 033: Loading Warehouse   1528 done
+Worker 033: Loading Warehouse   1587
+Worker 057: Loading Warehouse   1527 done
+Worker 057: Loading Warehouse   1588
+Worker 059: Loading Warehouse   1529 done
+Worker 059: Loading Warehouse   1589
+Worker 054: Loading Warehouse   1530 done
+Worker 054: Loading Warehouse   1590
+Worker 030: Loading Warehouse   1533 done
+Worker 030: Loading Warehouse   1591
+Worker 056: Loading Warehouse   1531 done
+Worker 056: Loading Warehouse   1592
+Worker 040: Loading Warehouse   1534 done
+Worker 040: Loading Warehouse   1593
+Worker 018: Loading Warehouse   1532 done
+Worker 018: Loading Warehouse   1594
+Worker 047: Loading Warehouse   1535 done
+Worker 047: Loading Warehouse   1595
+Worker 032: Loading Warehouse   1538 done
+Worker 032: Loading Warehouse   1596
+Worker 010: Loading Warehouse   1539 done
+Worker 010: Loading Warehouse   1597
+Worker 055: Loading Warehouse   1536 done
+Worker 055: Loading Warehouse   1598
+Worker 019: Loading Warehouse   1545 done
+Worker 019: Loading Warehouse   1599
+Worker 022: Loading Warehouse   1541 done
+Worker 022: Loading Warehouse   1600
+Worker 025: Loading Warehouse   1537 done
+Worker 025: Loading Warehouse   1601
+Worker 008: Loading Warehouse   1544 done
+Worker 008: Loading Warehouse   1602
+Worker 035: Loading Warehouse   1548 done
+Worker 035: Loading Warehouse   1603
+Worker 017: Loading Warehouse   1546 done
+Worker 017: Loading Warehouse   1604
+Worker 042: Loading Warehouse   1543 done
+Worker 042: Loading Warehouse   1605
+Worker 058: Loading Warehouse   1547 done
+Worker 058: Loading Warehouse   1606
+Worker 052: Loading Warehouse   1542 done
+Worker 052: Loading Warehouse   1607
+Worker 029: Loading Warehouse   1540 done
+Worker 029: Loading Warehouse   1608
+Worker 021: Loading Warehouse   1550 done
+Worker 021: Loading Warehouse   1609
+Worker 016: Loading Warehouse   1549 done
+Worker 016: Loading Warehouse   1610
+Worker 048: Loading Warehouse   1552 done
+Worker 048: Loading Warehouse   1611
+Worker 051: Loading Warehouse   1551 done
+Worker 051: Loading Warehouse   1612
+Worker 037: Loading Warehouse   1554 done
+Worker 037: Loading Warehouse   1613
+Worker 053: Loading Warehouse   1555 done
+Worker 053: Loading Warehouse   1614
+Worker 049: Loading Warehouse   1553 done
+Worker 049: Loading Warehouse   1615
+Worker 050: Loading Warehouse   1556 done
+Worker 050: Loading Warehouse   1616
+Worker 043: Loading Warehouse   1557 done
+Worker 043: Loading Warehouse   1617
+Worker 038: Loading Warehouse   1559 done
+Worker 038: Loading Warehouse   1618
+Worker 041: Loading Warehouse   1558 done
+Worker 041: Loading Warehouse   1619
+Worker 045: Loading Warehouse   1560 done
+Worker 045: Loading Warehouse   1620
+Worker 005: Loading Warehouse   1561 done
+Worker 005: Loading Warehouse   1621
+Worker 006: Loading Warehouse   1563 done
+Worker 006: Loading Warehouse   1622
+Worker 007: Loading Warehouse   1564 done
+Worker 007: Loading Warehouse   1623
+Worker 024: Loading Warehouse   1566 done
+Worker 024: Loading Warehouse   1624
+Worker 002: Loading Warehouse   1562 done
+Worker 002: Loading Warehouse   1625
+Worker 011: Loading Warehouse   1565 done
+Worker 011: Loading Warehouse   1626
+Worker 046: Loading Warehouse   1567 done
+Worker 046: Loading Warehouse   1627
+Worker 027: Loading Warehouse   1568 done
+Worker 027: Loading Warehouse   1628
+Worker 012: Loading Warehouse   1572 done
+Worker 012: Loading Warehouse   1629
+Worker 014: Loading Warehouse   1569 done
+Worker 014: Loading Warehouse   1630
+Worker 020: Loading Warehouse   1571 done
+Worker 020: Loading Warehouse   1631
+Worker 003: Loading Warehouse   1573 done
+Worker 003: Loading Warehouse   1632
+Worker 004: Loading Warehouse   1570 done
+Worker 004: Loading Warehouse   1633
+Worker 001: Loading Warehouse   1576 done
+Worker 001: Loading Warehouse   1634
+Worker 028: Loading Warehouse   1577 done
+Worker 028: Loading Warehouse   1635
+Worker 015: Loading Warehouse   1574 done
+Worker 015: Loading Warehouse   1636
+Worker 013: Loading Warehouse   1579 done
+Worker 013: Loading Warehouse   1637
+Worker 009: Loading Warehouse   1575 done
+Worker 009: Loading Warehouse   1638
+Worker 031: Loading Warehouse   1578 done
+Worker 031: Loading Warehouse   1639
+Worker 000: Loading Warehouse   1580 done
+Worker 000: Loading Warehouse   1640
+Worker 026: Loading Warehouse   1584 done
+Worker 026: Loading Warehouse   1641
+Worker 023: Loading Warehouse   1583 done
+Worker 023: Loading Warehouse   1642
+Worker 039: Loading Warehouse   1581 done
+Worker 039: Loading Warehouse   1643
+Worker 044: Loading Warehouse   1582 done
+Worker 044: Loading Warehouse   1644
+Worker 036: Loading Warehouse   1585 done
+Worker 036: Loading Warehouse   1645
+Worker 034: Loading Warehouse   1586 done
+Worker 034: Loading Warehouse   1646
+Worker 059: Loading Warehouse   1589 done
+Worker 059: Loading Warehouse   1647
+Worker 033: Loading Warehouse   1587 done
+Worker 033: Loading Warehouse   1648
+Worker 057: Loading Warehouse   1588 done
+Worker 057: Loading Warehouse   1649
+Worker 056: Loading Warehouse   1592 done
+Worker 056: Loading Warehouse   1650
+Worker 054: Loading Warehouse   1590 done
+Worker 054: Loading Warehouse   1651
+Worker 018: Loading Warehouse   1594 done
+Worker 018: Loading Warehouse   1652
+Worker 030: Loading Warehouse   1591 done
+Worker 030: Loading Warehouse   1653
+Worker 047: Loading Warehouse   1595 done
+Worker 047: Loading Warehouse   1654
+Worker 010: Loading Warehouse   1597 done
+Worker 010: Loading Warehouse   1655
+Worker 032: Loading Warehouse   1596 done
+Worker 032: Loading Warehouse   1656
+Worker 040: Loading Warehouse   1593 done
+Worker 040: Loading Warehouse   1657
+Worker 008: Loading Warehouse   1602 done
+Worker 008: Loading Warehouse   1658
+Worker 019: Loading Warehouse   1599 done
+Worker 019: Loading Warehouse   1659
+Worker 025: Loading Warehouse   1601 done
+Worker 025: Loading Warehouse   1660
+Worker 022: Loading Warehouse   1600 done
+Worker 022: Loading Warehouse   1661
+Worker 017: Loading Warehouse   1604 done
+Worker 017: Loading Warehouse   1662
+Worker 035: Loading Warehouse   1603 done
+Worker 035: Loading Warehouse   1663
+Worker 029: Loading Warehouse   1608 done
+Worker 029: Loading Warehouse   1664
+Worker 055: Loading Warehouse   1598 done
+Worker 055: Loading Warehouse   1665
+Worker 058: Loading Warehouse   1606 done
+Worker 058: Loading Warehouse   1666
+Worker 042: Loading Warehouse   1605 done
+Worker 042: Loading Warehouse   1667
+Worker 021: Loading Warehouse   1609 done
+Worker 021: Loading Warehouse   1668
+Worker 052: Loading Warehouse   1607 done
+Worker 052: Loading Warehouse   1669
+Worker 048: Loading Warehouse   1611 done
+Worker 048: Loading Warehouse   1670
+Worker 051: Loading Warehouse   1612 done
+Worker 051: Loading Warehouse   1671
+Worker 016: Loading Warehouse   1610 done
+Worker 016: Loading Warehouse   1672
+Worker 049: Loading Warehouse   1615 done
+Worker 049: Loading Warehouse   1673
+Worker 050: Loading Warehouse   1616 done
+Worker 050: Loading Warehouse   1674
+Worker 037: Loading Warehouse   1613 done
+Worker 037: Loading Warehouse   1675
+Worker 053: Loading Warehouse   1614 done
+Worker 053: Loading Warehouse   1676
+Worker 038: Loading Warehouse   1618 done
+Worker 038: Loading Warehouse   1677
+Worker 043: Loading Warehouse   1617 done
+Worker 043: Loading Warehouse   1678
+Worker 041: Loading Warehouse   1619 done
+Worker 041: Loading Warehouse   1679
+Worker 045: Loading Warehouse   1620 done
+Worker 045: Loading Warehouse   1680
+Worker 005: Loading Warehouse   1621 done
+Worker 005: Loading Warehouse   1681
+Worker 006: Loading Warehouse   1622 done
+Worker 006: Loading Warehouse   1682
+Worker 007: Loading Warehouse   1623 done
+Worker 007: Loading Warehouse   1683
+Worker 024: Loading Warehouse   1624 done
+Worker 024: Loading Warehouse   1684
+Worker 002: Loading Warehouse   1625 done
+Worker 002: Loading Warehouse   1685
+Worker 046: Loading Warehouse   1627 done
+Worker 046: Loading Warehouse   1686
+Worker 011: Loading Warehouse   1626 done
+Worker 011: Loading Warehouse   1687
+Worker 027: Loading Warehouse   1628 done
+Worker 027: Loading Warehouse   1688
+Worker 014: Loading Warehouse   1630 done
+Worker 014: Loading Warehouse   1689
+Worker 012: Loading Warehouse   1629 done
+Worker 012: Loading Warehouse   1690
+Worker 020: Loading Warehouse   1631 done
+Worker 020: Loading Warehouse   1691
+Worker 001: Loading Warehouse   1634 done
+Worker 001: Loading Warehouse   1692
+Worker 003: Loading Warehouse   1632 done
+Worker 003: Loading Warehouse   1693
+Worker 028: Loading Warehouse   1635 done
+Worker 028: Loading Warehouse   1694
+Worker 004: Loading Warehouse   1633 done
+Worker 004: Loading Warehouse   1695
+Worker 013: Loading Warehouse   1637 done
+Worker 013: Loading Warehouse   1696
+Worker 009: Loading Warehouse   1638 done
+Worker 009: Loading Warehouse   1697
+Worker 015: Loading Warehouse   1636 done
+Worker 015: Loading Warehouse   1698
+Worker 031: Loading Warehouse   1639 done
+Worker 031: Loading Warehouse   1699
+Worker 000: Loading Warehouse   1640 done
+Worker 000: Loading Warehouse   1700
+Worker 023: Loading Warehouse   1642 done
+Worker 023: Loading Warehouse   1701
+Worker 026: Loading Warehouse   1641 done
+Worker 026: Loading Warehouse   1702
+Worker 044: Loading Warehouse   1644 done
+Worker 044: Loading Warehouse   1703
+Worker 039: Loading Warehouse   1643 done
+Worker 039: Loading Warehouse   1704
+Worker 036: Loading Warehouse   1645 done
+Worker 036: Loading Warehouse   1705
+Worker 034: Loading Warehouse   1646 done
+Worker 034: Loading Warehouse   1706
+Worker 059: Loading Warehouse   1647 done
+Worker 059: Loading Warehouse   1707
+Worker 033: Loading Warehouse   1648 done
+Worker 033: Loading Warehouse   1708
+Worker 054: Loading Warehouse   1651 done
+Worker 054: Loading Warehouse   1709
+Worker 056: Loading Warehouse   1650 done
+Worker 056: Loading Warehouse   1710
+Worker 030: Loading Warehouse   1653 done
+Worker 030: Loading Warehouse   1711
+Worker 057: Loading Warehouse   1649 done
+Worker 057: Loading Warehouse   1712
+Worker 018: Loading Warehouse   1652 done
+Worker 018: Loading Warehouse   1713
+Worker 047: Loading Warehouse   1654 done
+Worker 047: Loading Warehouse   1714
+Worker 010: Loading Warehouse   1655 done
+Worker 010: Loading Warehouse   1715
+Worker 019: Loading Warehouse   1659 done
+Worker 019: Loading Warehouse   1716
+Worker 040: Loading Warehouse   1657 done
+Worker 040: Loading Warehouse   1717
+Worker 017: Loading Warehouse   1662 done
+Worker 017: Loading Warehouse   1718
+Worker 008: Loading Warehouse   1658 done
+Worker 008: Loading Warehouse   1719
+Worker 032: Loading Warehouse   1656 done
+Worker 032: Loading Warehouse   1720
+Worker 025: Loading Warehouse   1660 done
+Worker 025: Loading Warehouse   1721
+Worker 022: Loading Warehouse   1661 done
+Worker 022: Loading Warehouse   1722
+Worker 055: Loading Warehouse   1665 done
+Worker 055: Loading Warehouse   1723
+Worker 035: Loading Warehouse   1663 done
+Worker 035: Loading Warehouse   1724
+Worker 058: Loading Warehouse   1666 done
+Worker 058: Loading Warehouse   1725
+Worker 042: Loading Warehouse   1667 done
+Worker 042: Loading Warehouse   1726
+Worker 029: Loading Warehouse   1664 done
+Worker 029: Loading Warehouse   1727
+Worker 021: Loading Warehouse   1668 done
+Worker 021: Loading Warehouse   1728
+Worker 048: Loading Warehouse   1670 done
+Worker 048: Loading Warehouse   1729
+Worker 052: Loading Warehouse   1669 done
+Worker 052: Loading Warehouse   1730
+Worker 051: Loading Warehouse   1671 done
+Worker 051: Loading Warehouse   1731
+Worker 016: Loading Warehouse   1672 done
+Worker 016: Loading Warehouse   1732
+Worker 049: Loading Warehouse   1673 done
+Worker 049: Loading Warehouse   1733
+Worker 038: Loading Warehouse   1677 done
+Worker 038: Loading Warehouse   1734
+Worker 043: Loading Warehouse   1678 done
+Worker 043: Loading Warehouse   1735
+Worker 050: Loading Warehouse   1674 done
+Worker 050: Loading Warehouse   1736
+Worker 041: Loading Warehouse   1679 done
+Worker 041: Loading Warehouse   1737
+Worker 053: Loading Warehouse   1676 done
+Worker 053: Loading Warehouse   1738
+Worker 037: Loading Warehouse   1675 done
+Worker 037: Loading Warehouse   1739
+Worker 045: Loading Warehouse   1680 done
+Worker 045: Loading Warehouse   1740
+Worker 005: Loading Warehouse   1681 done
+Worker 005: Loading Warehouse   1741
+Worker 006: Loading Warehouse   1682 done
+Worker 006: Loading Warehouse   1742
+Worker 024: Loading Warehouse   1684 done
+Worker 024: Loading Warehouse   1743
+Worker 007: Loading Warehouse   1683 done
+Worker 007: Loading Warehouse   1744
+Worker 002: Loading Warehouse   1685 done
+Worker 002: Loading Warehouse   1745
+Worker 046: Loading Warehouse   1686 done
+Worker 046: Loading Warehouse   1746
+Worker 027: Loading Warehouse   1688 done
+Worker 027: Loading Warehouse   1747
+Worker 011: Loading Warehouse   1687 done
+Worker 011: Loading Warehouse   1748
+Worker 020: Loading Warehouse   1691 done
+Worker 020: Loading Warehouse   1749
+Worker 012: Loading Warehouse   1690 done
+Worker 012: Loading Warehouse   1750
+Worker 014: Loading Warehouse   1689 done
+Worker 014: Loading Warehouse   1751
+Worker 001: Loading Warehouse   1692 done
+Worker 001: Loading Warehouse   1752
+Worker 028: Loading Warehouse   1694 done
+Worker 028: Loading Warehouse   1753
+Worker 004: Loading Warehouse   1695 done
+Worker 004: Loading Warehouse   1754
+Worker 009: Loading Warehouse   1697 done
+Worker 009: Loading Warehouse   1755
+Worker 003: Loading Warehouse   1693 done
+Worker 003: Loading Warehouse   1756
+Worker 015: Loading Warehouse   1698 done
+Worker 015: Loading Warehouse   1757
+Worker 013: Loading Warehouse   1696 done
+Worker 013: Loading Warehouse   1758
+Worker 031: Loading Warehouse   1699 done
+Worker 031: Loading Warehouse   1759
+Worker 000: Loading Warehouse   1700 done
+Worker 000: Loading Warehouse   1760
+Worker 023: Loading Warehouse   1701 done
+Worker 023: Loading Warehouse   1761
+Worker 026: Loading Warehouse   1702 done
+Worker 026: Loading Warehouse   1762
+Worker 039: Loading Warehouse   1704 done
+Worker 039: Loading Warehouse   1763
+Worker 036: Loading Warehouse   1705 done
+Worker 036: Loading Warehouse   1764
+Worker 044: Loading Warehouse   1703 done
+Worker 044: Loading Warehouse   1765
+Worker 059: Loading Warehouse   1707 done
+Worker 059: Loading Warehouse   1766
+Worker 034: Loading Warehouse   1706 done
+Worker 034: Loading Warehouse   1767
+Worker 054: Loading Warehouse   1709 done
+Worker 054: Loading Warehouse   1768
+Worker 056: Loading Warehouse   1710 done
+Worker 056: Loading Warehouse   1769
+Worker 033: Loading Warehouse   1708 done
+Worker 033: Loading Warehouse   1770
+Worker 030: Loading Warehouse   1711 done
+Worker 030: Loading Warehouse   1771
+Worker 019: Loading Warehouse   1716 done
+Worker 019: Loading Warehouse   1772
+Worker 018: Loading Warehouse   1713 done
+Worker 018: Loading Warehouse   1773
+Worker 057: Loading Warehouse   1712 done
+Worker 057: Loading Warehouse   1774
+Worker 010: Loading Warehouse   1715 done
+Worker 010: Loading Warehouse   1775
+Worker 040: Loading Warehouse   1717 done
+Worker 040: Loading Warehouse   1776
+Worker 008: Loading Warehouse   1719 done
+Worker 008: Loading Warehouse   1777
+Worker 047: Loading Warehouse   1714 done
+Worker 047: Loading Warehouse   1778
+Worker 017: Loading Warehouse   1718 done
+Worker 017: Loading Warehouse   1779
+Worker 022: Loading Warehouse   1722 done
+Worker 022: Loading Warehouse   1780
+Worker 029: Loading Warehouse   1727 done
+Worker 029: Loading Warehouse   1781
+Worker 042: Loading Warehouse   1726 done
+Worker 042: Loading Warehouse   1782
+Worker 055: Loading Warehouse   1723 done
+Worker 055: Loading Warehouse   1783
+Worker 035: Loading Warehouse   1724 done
+Worker 035: Loading Warehouse   1784
+Worker 032: Loading Warehouse   1720 done
+Worker 032: Loading Warehouse   1785
+Worker 021: Loading Warehouse   1728 done
+Worker 021: Loading Warehouse   1786
+Worker 025: Loading Warehouse   1721 done
+Worker 025: Loading Warehouse   1787
+Worker 052: Loading Warehouse   1730 done
+Worker 052: Loading Warehouse   1788
+Worker 058: Loading Warehouse   1725 done
+Worker 058: Loading Warehouse   1789
+Worker 048: Loading Warehouse   1729 done
+Worker 048: Loading Warehouse   1790
+Worker 051: Loading Warehouse   1731 done
+Worker 051: Loading Warehouse   1791
+Worker 016: Loading Warehouse   1732 done
+Worker 016: Loading Warehouse   1792
+Worker 049: Loading Warehouse   1733 done
+Worker 049: Loading Warehouse   1793
+Worker 038: Loading Warehouse   1734 done
+Worker 038: Loading Warehouse   1794
+Worker 053: Loading Warehouse   1738 done
+Worker 053: Loading Warehouse   1795
+Worker 043: Loading Warehouse   1735 done
+Worker 043: Loading Warehouse   1796
+Worker 041: Loading Warehouse   1737 done
+Worker 041: Loading Warehouse   1797
+Worker 050: Loading Warehouse   1736 done
+Worker 050: Loading Warehouse   1798
+Worker 037: Loading Warehouse   1739 done
+Worker 037: Loading Warehouse   1799
+Worker 045: Loading Warehouse   1740 done
+Worker 045: Loading Warehouse   1800
+Worker 005: Loading Warehouse   1741 done
+Worker 005: Loading Warehouse   1801
+Worker 006: Loading Warehouse   1742 done
+Worker 006: Loading Warehouse   1802
+Worker 024: Loading Warehouse   1743 done
+Worker 024: Loading Warehouse   1803
+Worker 007: Loading Warehouse   1744 done
+Worker 007: Loading Warehouse   1804
+Worker 046: Loading Warehouse   1746 done
+Worker 046: Loading Warehouse   1805
+Worker 002: Loading Warehouse   1745 done
+Worker 002: Loading Warehouse   1806
+Worker 027: Loading Warehouse   1747 done
+Worker 027: Loading Warehouse   1807
+Worker 011: Loading Warehouse   1748 done
+Worker 011: Loading Warehouse   1808
+Worker 020: Loading Warehouse   1749 done
+Worker 020: Loading Warehouse   1809
+Worker 012: Loading Warehouse   1750 done
+Worker 012: Loading Warehouse   1810
+Worker 014: Loading Warehouse   1751 done
+Worker 014: Loading Warehouse   1811
+Worker 028: Loading Warehouse   1753 done
+Worker 028: Loading Warehouse   1812
+Worker 004: Loading Warehouse   1754 done
+Worker 004: Loading Warehouse   1813
+Worker 009: Loading Warehouse   1755 done
+Worker 009: Loading Warehouse   1814
+Worker 001: Loading Warehouse   1752 done
+Worker 001: Loading Warehouse   1815
+Worker 003: Loading Warehouse   1756 done
+Worker 003: Loading Warehouse   1816
+Worker 013: Loading Warehouse   1758 done
+Worker 013: Loading Warehouse   1817
+Worker 015: Loading Warehouse   1757 done
+Worker 015: Loading Warehouse   1818
+Worker 031: Loading Warehouse   1759 done
+Worker 031: Loading Warehouse   1819
+Worker 000: Loading Warehouse   1760 done
+Worker 000: Loading Warehouse   1820
+Worker 023: Loading Warehouse   1761 done
+Worker 023: Loading Warehouse   1821
+Worker 036: Loading Warehouse   1764 done
+Worker 036: Loading Warehouse   1822
+Worker 039: Loading Warehouse   1763 done
+Worker 039: Loading Warehouse   1823
+Worker 026: Loading Warehouse   1762 done
+Worker 026: Loading Warehouse   1824
+Worker 044: Loading Warehouse   1765 done
+Worker 044: Loading Warehouse   1825
+Worker 034: Loading Warehouse   1767 done
+Worker 034: Loading Warehouse   1826
+Worker 059: Loading Warehouse   1766 done
+Worker 059: Loading Warehouse   1827
+Worker 033: Loading Warehouse   1770 done
+Worker 033: Loading Warehouse   1828
+Worker 056: Loading Warehouse   1769 done
+Worker 056: Loading Warehouse   1829
+Worker 054: Loading Warehouse   1768 done
+Worker 054: Loading Warehouse   1830
+Worker 030: Loading Warehouse   1771 done
+Worker 030: Loading Warehouse   1831
+Worker 019: Loading Warehouse   1772 done
+Worker 019: Loading Warehouse   1832
+Worker 040: Loading Warehouse   1776 done
+Worker 040: Loading Warehouse   1833
+Worker 018: Loading Warehouse   1773 done
+Worker 018: Loading Warehouse   1834
+Worker 047: Loading Warehouse   1778 done
+Worker 047: Loading Warehouse   1835
+Worker 008: Loading Warehouse   1777 done
+Worker 008: Loading Warehouse   1836
+Worker 017: Loading Warehouse   1779 done
+Worker 017: Loading Warehouse   1837
+Worker 032: Loading Warehouse   1785 done
+Worker 032: Loading Warehouse   1838
+Worker 010: Loading Warehouse   1775 done
+Worker 010: Loading Warehouse   1839
+Worker 022: Loading Warehouse   1780 done
+Worker 022: Loading Warehouse   1840
+Worker 055: Loading Warehouse   1783 done
+Worker 055: Loading Warehouse   1841
+Worker 042: Loading Warehouse   1782 done
+Worker 042: Loading Warehouse   1842
+Worker 057: Loading Warehouse   1774 done
+Worker 057: Loading Warehouse   1843
+Worker 035: Loading Warehouse   1784 done
+Worker 035: Loading Warehouse   1844
+Worker 021: Loading Warehouse   1786 done
+Worker 021: Loading Warehouse   1845
+Worker 029: Loading Warehouse   1781 done
+Worker 029: Loading Warehouse   1846
+Worker 052: Loading Warehouse   1788 done
+Worker 052: Loading Warehouse   1847
+Worker 058: Loading Warehouse   1789 done
+Worker 058: Loading Warehouse   1848
+Worker 051: Loading Warehouse   1791 done
+Worker 051: Loading Warehouse   1849
+Worker 025: Loading Warehouse   1787 done
+Worker 025: Loading Warehouse   1850
+Worker 048: Loading Warehouse   1790 done
+Worker 048: Loading Warehouse   1851
+Worker 016: Loading Warehouse   1792 done
+Worker 016: Loading Warehouse   1852
+Worker 049: Loading Warehouse   1793 done
+Worker 049: Loading Warehouse   1853
+Worker 038: Loading Warehouse   1794 done
+Worker 038: Loading Warehouse   1854
+Worker 043: Loading Warehouse   1796 done
+Worker 043: Loading Warehouse   1855
+Worker 053: Loading Warehouse   1795 done
+Worker 053: Loading Warehouse   1856
+Worker 041: Loading Warehouse   1797 done
+Worker 041: Loading Warehouse   1857
+Worker 037: Loading Warehouse   1799 done
+Worker 037: Loading Warehouse   1858
+Worker 050: Loading Warehouse   1798 done
+Worker 050: Loading Warehouse   1859
+Worker 045: Loading Warehouse   1800 done
+Worker 045: Loading Warehouse   1860
+Worker 005: Loading Warehouse   1801 done
+Worker 005: Loading Warehouse   1861
+Worker 006: Loading Warehouse   1802 done
+Worker 006: Loading Warehouse   1862
+Worker 046: Loading Warehouse   1805 done
+Worker 046: Loading Warehouse   1863
+Worker 007: Loading Warehouse   1804 done
+Worker 007: Loading Warehouse   1864
+Worker 024: Loading Warehouse   1803 done
+Worker 024: Loading Warehouse   1865
+Worker 002: Loading Warehouse   1806 done
+Worker 002: Loading Warehouse   1866
+Worker 027: Loading Warehouse   1807 done
+Worker 027: Loading Warehouse   1867
+Worker 020: Loading Warehouse   1809 done
+Worker 020: Loading Warehouse   1868
+Worker 011: Loading Warehouse   1808 done
+Worker 011: Loading Warehouse   1869
+Worker 012: Loading Warehouse   1810 done
+Worker 012: Loading Warehouse   1870
+Worker 014: Loading Warehouse   1811 done
+Worker 014: Loading Warehouse   1871
+Worker 028: Loading Warehouse   1812 done
+Worker 028: Loading Warehouse   1872
+Worker 004: Loading Warehouse   1813 done
+Worker 004: Loading Warehouse   1873
+Worker 001: Loading Warehouse   1815 done
+Worker 001: Loading Warehouse   1874
+Worker 013: Loading Warehouse   1817 done
+Worker 013: Loading Warehouse   1875
+Worker 009: Loading Warehouse   1814 done
+Worker 009: Loading Warehouse   1876
+Worker 003: Loading Warehouse   1816 done
+Worker 003: Loading Warehouse   1877
+Worker 015: Loading Warehouse   1818 done
+Worker 015: Loading Warehouse   1878
+Worker 000: Loading Warehouse   1820 done
+Worker 000: Loading Warehouse   1879
+Worker 023: Loading Warehouse   1821 done
+Worker 023: Loading Warehouse   1880
+Worker 031: Loading Warehouse   1819 done
+Worker 031: Loading Warehouse   1881
+Worker 039: Loading Warehouse   1823 done
+Worker 039: Loading Warehouse   1882
+Worker 026: Loading Warehouse   1824 done
+Worker 026: Loading Warehouse   1883
+Worker 036: Loading Warehouse   1822 done
+Worker 036: Loading Warehouse   1884
+Worker 059: Loading Warehouse   1827 done
+Worker 059: Loading Warehouse   1885
+Worker 044: Loading Warehouse   1825 done
+Worker 044: Loading Warehouse   1886
+Worker 034: Loading Warehouse   1826 done
+Worker 034: Loading Warehouse   1887
+Worker 033: Loading Warehouse   1828 done
+Worker 033: Loading Warehouse   1888
+Worker 056: Loading Warehouse   1829 done
+Worker 056: Loading Warehouse   1889
+Worker 054: Loading Warehouse   1830 done
+Worker 054: Loading Warehouse   1890
+Worker 040: Loading Warehouse   1833 done
+Worker 040: Loading Warehouse   1891
+Worker 019: Loading Warehouse   1832 done
+Worker 019: Loading Warehouse   1892
+Worker 018: Loading Warehouse   1834 done
+Worker 018: Loading Warehouse   1893
+Worker 030: Loading Warehouse   1831 done
+Worker 030: Loading Warehouse   1894
+Worker 008: Loading Warehouse   1836 done
+Worker 008: Loading Warehouse   1895
+Worker 057: Loading Warehouse   1843 done
+Worker 057: Loading Warehouse   1896
+Worker 017: Loading Warehouse   1837 done
+Worker 017: Loading Warehouse   1897
+Worker 035: Loading Warehouse   1844 done
+Worker 035: Loading Warehouse   1898
+Worker 032: Loading Warehouse   1838 done
+Worker 032: Loading Warehouse   1899
+Worker 029: Loading Warehouse   1846 done
+Worker 029: Loading Warehouse   1900
+Worker 047: Loading Warehouse   1835 done
+Worker 047: Loading Warehouse   1901
+Worker 022: Loading Warehouse   1840 done
+Worker 022: Loading Warehouse   1902
+Worker 042: Loading Warehouse   1842 done
+Worker 042: Loading Warehouse   1903
+Worker 052: Loading Warehouse   1847 done
+Worker 052: Loading Warehouse   1904
+Worker 058: Loading Warehouse   1848 done
+Worker 058: Loading Warehouse   1905
+Worker 055: Loading Warehouse   1841 done
+Worker 055: Loading Warehouse   1906
+Worker 010: Loading Warehouse   1839 done
+Worker 010: Loading Warehouse   1907
+Worker 021: Loading Warehouse   1845 done
+Worker 021: Loading Warehouse   1908
+Worker 051: Loading Warehouse   1849 done
+Worker 051: Loading Warehouse   1909
+Worker 025: Loading Warehouse   1850 done
+Worker 025: Loading Warehouse   1910
+Worker 048: Loading Warehouse   1851 done
+Worker 048: Loading Warehouse   1911
+Worker 016: Loading Warehouse   1852 done
+Worker 016: Loading Warehouse   1912
+Worker 049: Loading Warehouse   1853 done
+Worker 049: Loading Warehouse   1913
+Worker 038: Loading Warehouse   1854 done
+Worker 038: Loading Warehouse   1914
+Worker 053: Loading Warehouse   1856 done
+Worker 053: Loading Warehouse   1915
+Worker 041: Loading Warehouse   1857 done
+Worker 041: Loading Warehouse   1916
+Worker 043: Loading Warehouse   1855 done
+Worker 043: Loading Warehouse   1917
+Worker 037: Loading Warehouse   1858 done
+Worker 037: Loading Warehouse   1918
+Worker 050: Loading Warehouse   1859 done
+Worker 050: Loading Warehouse   1919
+Worker 045: Loading Warehouse   1860 done
+Worker 045: Loading Warehouse   1920
+Worker 005: Loading Warehouse   1861 done
+Worker 005: Loading Warehouse   1921
+Worker 046: Loading Warehouse   1863 done
+Worker 046: Loading Warehouse   1922
+Worker 006: Loading Warehouse   1862 done
+Worker 006: Loading Warehouse   1923
+Worker 007: Loading Warehouse   1864 done
+Worker 007: Loading Warehouse   1924
+Worker 024: Loading Warehouse   1865 done
+Worker 024: Loading Warehouse   1925
+Worker 002: Loading Warehouse   1866 done
+Worker 002: Loading Warehouse   1926
+Worker 027: Loading Warehouse   1867 done
+Worker 027: Loading Warehouse   1927
+Worker 020: Loading Warehouse   1868 done
+Worker 020: Loading Warehouse   1928
+Worker 011: Loading Warehouse   1869 done
+Worker 011: Loading Warehouse   1929
+Worker 012: Loading Warehouse   1870 done
+Worker 012: Loading Warehouse   1930
+Worker 028: Loading Warehouse   1872 done
+Worker 028: Loading Warehouse   1931
+Worker 004: Loading Warehouse   1873 done
+Worker 004: Loading Warehouse   1932
+Worker 014: Loading Warehouse   1871 done
+Worker 014: Loading Warehouse   1933
+Worker 013: Loading Warehouse   1875 done
+Worker 013: Loading Warehouse   1934
+Worker 001: Loading Warehouse   1874 done
+Worker 001: Loading Warehouse   1935
+Worker 009: Loading Warehouse   1876 done
+Worker 009: Loading Warehouse   1936
+Worker 003: Loading Warehouse   1877 done
+Worker 003: Loading Warehouse   1937
+Worker 015: Loading Warehouse   1878 done
+Worker 015: Loading Warehouse   1938
+Worker 023: Loading Warehouse   1880 done
+Worker 023: Loading Warehouse   1939
+Worker 000: Loading Warehouse   1879 done
+Worker 000: Loading Warehouse   1940
+Worker 031: Loading Warehouse   1881 done
+Worker 031: Loading Warehouse   1941
+Worker 039: Loading Warehouse   1882 done
+Worker 039: Loading Warehouse   1942
+Worker 059: Loading Warehouse   1885 done
+Worker 059: Loading Warehouse   1943
+Worker 044: Loading Warehouse   1886 done
+Worker 044: Loading Warehouse   1944
+Worker 036: Loading Warehouse   1884 done
+Worker 036: Loading Warehouse   1945
+Worker 026: Loading Warehouse   1883 done
+Worker 026: Loading Warehouse   1946
+Worker 034: Loading Warehouse   1887 done
+Worker 034: Loading Warehouse   1947
+Worker 033: Loading Warehouse   1888 done
+Worker 033: Loading Warehouse   1948
+Worker 054: Loading Warehouse   1890 done
+Worker 054: Loading Warehouse   1949
+Worker 056: Loading Warehouse   1889 done
+Worker 056: Loading Warehouse   1950
+Worker 019: Loading Warehouse   1892 done
+Worker 019: Loading Warehouse   1951
+Worker 018: Loading Warehouse   1893 done
+Worker 018: Loading Warehouse   1952
+Worker 040: Loading Warehouse   1891 done
+Worker 040: Loading Warehouse   1953
+Worker 030: Loading Warehouse   1894 done
+Worker 030: Loading Warehouse   1954
+Worker 017: Loading Warehouse   1897 done
+Worker 017: Loading Warehouse   1955
+Worker 008: Loading Warehouse   1895 done
+Worker 008: Loading Warehouse   1956
+Worker 057: Loading Warehouse   1896 done
+Worker 057: Loading Warehouse   1957
+Worker 029: Loading Warehouse   1900 done
+Worker 029: Loading Warehouse   1958
+Worker 035: Loading Warehouse   1898 done
+Worker 035: Loading Warehouse   1959
+Worker 022: Loading Warehouse   1902 done
+Worker 022: Loading Warehouse   1960
+Worker 032: Loading Warehouse   1899 done
+Worker 032: Loading Warehouse   1961
+Worker 047: Loading Warehouse   1901 done
+Worker 047: Loading Warehouse   1962
+Worker 042: Loading Warehouse   1903 done
+Worker 042: Loading Warehouse   1963
+Worker 010: Loading Warehouse   1907 done
+Worker 010: Loading Warehouse   1964
+Worker 021: Loading Warehouse   1908 done
+Worker 021: Loading Warehouse   1965
+Worker 055: Loading Warehouse   1906 done
+Worker 055: Loading Warehouse   1966
+Worker 052: Loading Warehouse   1904 done
+Worker 052: Loading Warehouse   1967
+Worker 058: Loading Warehouse   1905 done
+Worker 058: Loading Warehouse   1968
+Worker 051: Loading Warehouse   1909 done
+Worker 051: Loading Warehouse   1969
+Worker 025: Loading Warehouse   1910 done
+Worker 025: Loading Warehouse   1970
+Worker 048: Loading Warehouse   1911 done
+Worker 048: Loading Warehouse   1971
+Worker 016: Loading Warehouse   1912 done
+Worker 016: Loading Warehouse   1972
+Worker 049: Loading Warehouse   1913 done
+Worker 049: Loading Warehouse   1973
+Worker 038: Loading Warehouse   1914 done
+Worker 038: Loading Warehouse   1974
+Worker 053: Loading Warehouse   1915 done
+Worker 053: Loading Warehouse   1975
+Worker 043: Loading Warehouse   1917 done
+Worker 043: Loading Warehouse   1976
+Worker 041: Loading Warehouse   1916 done
+Worker 041: Loading Warehouse   1977
+Worker 037: Loading Warehouse   1918 done
+Worker 037: Loading Warehouse   1978
+Worker 050: Loading Warehouse   1919 done
+Worker 050: Loading Warehouse   1979
+Worker 045: Loading Warehouse   1920 done
+Worker 045: Loading Warehouse   1980
+Worker 005: Loading Warehouse   1921 done
+Worker 005: Loading Warehouse   1981
+Worker 046: Loading Warehouse   1922 done
+Worker 046: Loading Warehouse   1982
+Worker 006: Loading Warehouse   1923 done
+Worker 006: Loading Warehouse   1983
+Worker 007: Loading Warehouse   1924 done
+Worker 007: Loading Warehouse   1984
+Worker 027: Loading Warehouse   1927 done
+Worker 027: Loading Warehouse   1985
+Worker 024: Loading Warehouse   1925 done
+Worker 024: Loading Warehouse   1986
+Worker 002: Loading Warehouse   1926 done
+Worker 002: Loading Warehouse   1987
+Worker 020: Loading Warehouse   1928 done
+Worker 020: Loading Warehouse   1988
+Worker 011: Loading Warehouse   1929 done
+Worker 011: Loading Warehouse   1989
+Worker 012: Loading Warehouse   1930 done
+Worker 012: Loading Warehouse   1990
+Worker 028: Loading Warehouse   1931 done
+Worker 028: Loading Warehouse   1991
+Worker 004: Loading Warehouse   1932 done
+Worker 004: Loading Warehouse   1992
+Worker 014: Loading Warehouse   1933 done
+Worker 014: Loading Warehouse   1993
+Worker 013: Loading Warehouse   1934 done
+Worker 013: Loading Warehouse   1994
+Worker 001: Loading Warehouse   1935 done
+Worker 001: Loading Warehouse   1995
+Worker 009: Loading Warehouse   1936 done
+Worker 009: Loading Warehouse   1996
+Worker 015: Loading Warehouse   1938 done
+Worker 015: Loading Warehouse   1997
+Worker 003: Loading Warehouse   1937 done
+Worker 003: Loading Warehouse   1998
+Worker 000: Loading Warehouse   1940 done
+Worker 000: Loading Warehouse   1999
+Worker 031: Loading Warehouse   1941 done
+Worker 031: Loading Warehouse   2000
+Worker 023: Loading Warehouse   1939 done
+Worker 059: Loading Warehouse   1943 done
+Worker 044: Loading Warehouse   1944 done
+Worker 039: Loading Warehouse   1942 done
+Worker 036: Loading Warehouse   1945 done
+Worker 026: Loading Warehouse   1946 done
+Worker 033: Loading Warehouse   1948 done
+Worker 034: Loading Warehouse   1947 done
+Worker 056: Loading Warehouse   1950 done
+Worker 054: Loading Warehouse   1949 done
+Worker 040: Loading Warehouse   1953 done
+Worker 018: Loading Warehouse   1952 done
+Worker 019: Loading Warehouse   1951 done
+Worker 017: Loading Warehouse   1955 done
+Worker 030: Loading Warehouse   1954 done
+Worker 029: Loading Warehouse   1958 done
+Worker 047: Loading Warehouse   1962 done
+Worker 057: Loading Warehouse   1957 done
+Worker 022: Loading Warehouse   1960 done
+Worker 008: Loading Warehouse   1956 done
+Worker 032: Loading Warehouse   1961 done
+Worker 042: Loading Warehouse   1963 done
+Worker 035: Loading Warehouse   1959 done
+Worker 055: Loading Warehouse   1966 done
+Worker 052: Loading Warehouse   1967 done
+Worker 010: Loading Warehouse   1964 done
+Worker 021: Loading Warehouse   1965 done
+Worker 058: Loading Warehouse   1968 done
+Worker 051: Loading Warehouse   1969 done
+Worker 025: Loading Warehouse   1970 done
+Worker 016: Loading Warehouse   1972 done
+Worker 048: Loading Warehouse   1971 done
+Worker 038: Loading Warehouse   1974 done
+Worker 049: Loading Warehouse   1973 done
+Worker 053: Loading Warehouse   1975 done
+Worker 041: Loading Warehouse   1977 done
+Worker 037: Loading Warehouse   1978 done
+Worker 043: Loading Warehouse   1976 done
+Worker 050: Loading Warehouse   1979 done
+Worker 045: Loading Warehouse   1980 done
+Worker 005: Loading Warehouse   1981 done
+Worker 006: Loading Warehouse   1983 done
+Worker 046: Loading Warehouse   1982 done
+Worker 007: Loading Warehouse   1984 done
+Worker 027: Loading Warehouse   1985 done
+Worker 002: Loading Warehouse   1987 done
+Worker 020: Loading Warehouse   1988 done
+Worker 024: Loading Warehouse   1986 done
+Worker 012: Loading Warehouse   1990 done
+Worker 011: Loading Warehouse   1989 done
+Worker 028: Loading Warehouse   1991 done
+Worker 004: Loading Warehouse   1992 done
+Worker 009: Loading Warehouse   1996 done
+Worker 013: Loading Warehouse   1994 done
+Worker 001: Loading Warehouse   1995 done
+Worker 003: Loading Warehouse   1998 done
+Worker 014: Loading Warehouse   1993 done
+Worker 015: Loading Warehouse   1997 done
+Worker 031: Loading Warehouse   2000 done
+Worker 000: Loading Warehouse   1999 done
++ '[' 2 -ne 2 ']'
++ source ./funcs.sh perforacle.prop
+++ PROPS=perforacle.prop
+++ '[' '!' -f perforacle.prop ']'
+++ case "$(getProp db)" in
++++ getProp db
++++ grep '^db=' perforacle.prop
++++ sed -e 's/^db=//'
++ echo indexCreates
++ grep -q -e '\.sql$'
++ ENDS_WITH_SQL=0
++ '[' -f indexCreates -a 0 -eq 1 ']'
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ '[' -f ./sql.oracle/indexCreates.sql ']'
++ SQL_FILE=./sql.common/indexCreates.sql
++ '[' '!' -f ./sql.common/indexCreates.sql ']'
++ setCP
++ case "$(getProp db)" in
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ cp='../lib/oracle/*'
++ '[' '!' -z '' -a -d /lib ']'
++ cp='../lib/oracle/*:../lib/*'
++ myCP='.:../lib/oracle/*:../lib/*:../dist/*'
++ export myCP
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ echo '# Loading SQL file ./sql.common/indexCreates.sql'
+# Loading SQL file ./sql.common/indexCreates.sql
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ myOPTS=-Dprop=perforacle.prop
++ myOPTS='-Dprop=perforacle.prop -DcommandFile=./sql.common/indexCreates.sql'
++ echo '.:../lib/oracle/*:../lib/*:../dist/*'
+.:../lib/oracle/*:../lib/*:../dist/*
++ echo -Dprop=perforacle.prop -DcommandFile=./sql.common/indexCreates.sql
+-Dprop=perforacle.prop -DcommandFile=./sql.common/indexCreates.sql
++ java -cp '.:../lib/oracle/*:../lib/*:../dist/*' -Dprop=perforacle.prop -DcommandFile=./sql.common/indexCreates.sql ExecJDBC
+create index bmsql_customer_idx1
+on  bmsql_customer (c_w_id, c_d_id, c_last, c_first) local;
+ORA-00600: internal error code, arguments: -5703, Add index failed
+create  index bmsql_oorder_idx1
+on  bmsql_oorder (o_w_id, o_d_id, o_carrier_id, o_id) local;
+DONE
++ '[' 2 -ne 2 ']'
++ source ./funcs.sh perforacle.prop
+++ PROPS=perforacle.prop
+++ '[' '!' -f perforacle.prop ']'
+++ case "$(getProp db)" in
++++ getProp db
++++ grep '^db=' perforacle.prop
++++ sed -e 's/^db=//'
++ echo foreignKeys
++ grep -q -e '\.sql$'
++ ENDS_WITH_SQL=0
++ '[' -f foreignKeys -a 0 -eq 1 ']'
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ '[' -f ./sql.oracle/foreignKeys.sql ']'
++ SQL_FILE=./sql.common/foreignKeys.sql
++ '[' '!' -f ./sql.common/foreignKeys.sql ']'
++ setCP
++ case "$(getProp db)" in
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ cp='../lib/oracle/*'
++ '[' '!' -z '' -a -d /lib ']'
++ cp='../lib/oracle/*:../lib/*'
++ myCP='.:../lib/oracle/*:../lib/*:../dist/*'
++ export myCP
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ echo '# Loading SQL file ./sql.common/foreignKeys.sql'
+# Loading SQL file ./sql.common/foreignKeys.sql
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ myOPTS=-Dprop=perforacle.prop
++ myOPTS='-Dprop=perforacle.prop -DcommandFile=./sql.common/foreignKeys.sql'
++ echo '.:../lib/oracle/*:../lib/*:../dist/*'
+.:../lib/oracle/*:../lib/*:../dist/*
++ echo -Dprop=perforacle.prop -DcommandFile=./sql.common/foreignKeys.sql
+-Dprop=perforacle.prop -DcommandFile=./sql.common/foreignKeys.sql
++ java -cp '.:../lib/oracle/*:../lib/*:../dist/*' -Dprop=perforacle.prop -DcommandFile=./sql.common/foreignKeys.sql ExecJDBC
+DONE
++ '[' 2 -ne 2 ']'
++ source ./funcs.sh perforacle.prop
+++ PROPS=perforacle.prop
+++ '[' '!' -f perforacle.prop ']'
+++ case "$(getProp db)" in
++++ getProp db
++++ grep '^db=' perforacle.prop
++++ sed -e 's/^db=//'
++ echo extraHistID
++ grep -q -e '\.sql$'
++ ENDS_WITH_SQL=0
++ '[' -f extraHistID -a 0 -eq 1 ']'
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ '[' -f ./sql.oracle/extraHistID.sql ']'
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ SQL_FILE=./sql.oracle/extraHistID.sql
++ setCP
++ case "$(getProp db)" in
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ cp='../lib/oracle/*'
++ '[' '!' -z '' -a -d /lib ']'
++ cp='../lib/oracle/*:../lib/*'
++ myCP='.:../lib/oracle/*:../lib/*:../dist/*'
++ export myCP
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ echo '# Loading SQL file ./sql.oracle/extraHistID.sql'
+# Loading SQL file ./sql.oracle/extraHistID.sql
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ myOPTS=-Dprop=perforacle.prop
++ myOPTS='-Dprop=perforacle.prop -DcommandFile=./sql.oracle/extraHistID.sql'
++ echo '.:../lib/oracle/*:../lib/*:../dist/*'
+.:../lib/oracle/*:../lib/*:../dist/*
++ echo -Dprop=perforacle.prop -DcommandFile=./sql.oracle/extraHistID.sql
+-Dprop=perforacle.prop -DcommandFile=./sql.oracle/extraHistID.sql
++ java -cp '.:../lib/oracle/*:../lib/*:../dist/*' -Dprop=perforacle.prop -DcommandFile=./sql.oracle/extraHistID.sql ExecJDBC
+-- ----
+-- Extra Schema objects/definitions for history.hist_id in Oracle
+-- ----
+-- ----
+--	This is an extra column not present in the TPC-C
+--	specs. It is useful for replication systems like
+--	Bucardo and Slony-I, which like to have a primary
+--	key on a table. It is an auto-increment or serial
+--	column type. The definition below is compatible
+--	with Oracle 11g, using the sequence in a trigger.
+-- ----
+-- Adjust the sequence above the current max(hist_id)
+alter sequence bmsql_hist_id_seq increment by 30000;
+declare
+n integer;
+i integer;
+dummy integer;
+begin
+select max(hist_id) into n from bmsql_history;
+i := 0;
+while i <= n loop
+select bmsql_hist_id_seq.nextval into dummy from dual;
+i := i + 30000;
+end loop;
+end;
+;
+alter sequence bmsql_hist_id_seq increment by 1;
+-- Create a trigger that forces hist_id to be hist_id_seq.nextval
+create trigger bmsql_history_before_insert
+before insert on bmsql_history
+for each row
+begin
+if :new.hist_id is null then
+select bmsql_hist_id_seq.nextval into :new.hist_id from dual;
+end if;
+end;
+;
+-- Add a primary key history(hist_id)
+alter table bmsql_history add primary key (hist_id);
+ORA-00600: internal error code, arguments: -4007, Not supported feature or function
+DONE
++ '[' 2 -ne 2 ']'
++ source ./funcs.sh perforacle.prop
+++ PROPS=perforacle.prop
+++ '[' '!' -f perforacle.prop ']'
+++ case "$(getProp db)" in
++++ getProp db
++++ grep '^db=' perforacle.prop
++++ sed -e 's/^db=//'
++ echo buildFinish
++ grep -q -e '\.sql$'
++ ENDS_WITH_SQL=0
++ '[' -f buildFinish -a 0 -eq 1 ']'
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ '[' -f ./sql.oracle/buildFinish.sql ']'
++ SQL_FILE=./sql.common/buildFinish.sql
++ '[' '!' -f ./sql.common/buildFinish.sql ']'
++ setCP
++ case "$(getProp db)" in
+++ getProp db
+++ grep '^db=' perforacle.prop
+++ sed -e 's/^db=//'
++ cp='../lib/oracle/*'
++ '[' '!' -z '' -a -d /lib ']'
++ cp='../lib/oracle/*:../lib/*'
++ myCP='.:../lib/oracle/*:../lib/*:../dist/*'
++ export myCP
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ echo '# Loading SQL file ./sql.common/buildFinish.sql'
+# Loading SQL file ./sql.common/buildFinish.sql
++ echo '# ------------------------------------------------------------'
+# ------------------------------------------------------------
++ myOPTS=-Dprop=perforacle.prop
++ myOPTS='-Dprop=perforacle.prop -DcommandFile=./sql.common/buildFinish.sql'
++ echo '.:../lib/oracle/*:../lib/*:../dist/*'
+.:../lib/oracle/*:../lib/*:../dist/*
++ echo -Dprop=perforacle.prop -DcommandFile=./sql.common/buildFinish.sql
+-Dprop=perforacle.prop -DcommandFile=./sql.common/buildFinish.sql
++ java -cp '.:../lib/oracle/*:../lib/*:../dist/*' -Dprop=perforacle.prop -DcommandFile=./sql.common/buildFinish.sql ExecJDBC
+-- ----
+-- Extra commands to run after the tables are created, loaded,
+-- indexes built and extra's created.
+-- ----
+DONE

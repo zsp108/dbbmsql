@@ -1,0 +1,21 @@
+db=oracle
+driver=com.mysql.jdbc.Driver
+conn=jdbc:mysql://192.168.111.130:3306/benchmarksql?rewriteBatchedStatements=false
+user=root
+password=root
+
+warehouses=10
+terminals=2
+runTxnsPerTerminal=0
+//To run for specified minutes- runTxnsPerTerminal must equal zero
+runMins=2
+//Number of total transactions per minute
+limitTxnsPerMin=1000000
+
+//The following five values must add up to 100
+newOrderWeight=45
+paymentWeight=43
+orderStatusWeight=4
+deliveryWeight=4
+stockLevelWeight=4
+
