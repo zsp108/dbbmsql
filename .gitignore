@@ -30,4 +30,7 @@ go.work.sum
 # Editor temporary files
 *.tmp
 
+# venv directory
+vendor
+
 # End of /root/workspace/github/dbbmsql/.gitignore
