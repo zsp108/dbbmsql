@@ -1,29 +1,30 @@
 package utils
 
 import (
-	"encoding/json"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
-func UnmarshalJSON(data []byte, v interface{}) error {
-	return json.Unmarshal(data, v)
+func UnmarshalYAML(data []byte, v interface{}) error {
+	return yaml.Unmarshal(data, v)
 }
 
-func MarshalJSON(v interface{}) ([]byte, error) {
-	return json.Marshal(v)
+func MarshalYAML(v interface{}) ([]byte, error) {
+	return yaml.Marshal(v)
 }
 
 // UnmarshalJSONFile unmarshals a JSON file into a struct
-func UnmarshalJSONFile(filePath string, v interface{}) error {
+func UnmarshalYAMLFile(filePath string, v interface{}) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, v)
+	return yaml.Unmarshal(data, v)
 }
 
 // MarshalJSONFile marshals a struct into a JSON file
-func MarshalJSONFile(filePath string, v interface{}) error {
+func MarshalYAMLFile(filePath string, v interface{}) error {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		f, err := os.Create(filePath)
 		if err != nil {
@@ -31,7 +32,7 @@ func MarshalJSONFile(filePath string, v interface{}) error {
 		}
 		defer f.Close()
 	}
-	data, err := json.MarshalIndent(v, " ", "  ")
+	data, err := yaml.Marshal(v)
 	if err != nil {
 		return err
 	}
