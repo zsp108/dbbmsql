@@ -33,4 +33,7 @@ go.work.sum
 # venv directory
 vendor
 
+# vscode directory
+.vscode
+
 # End of /root/workspace/github/dbbmsql/.gitignore
