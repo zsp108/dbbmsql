@@ -1,0 +1,13 @@
+general:
+  logdir: /root/workspace/github/dbbmsql/logs
+  loglevel: debug
+mysql:
+  host: 127.0.0.1
+  username: root
+  password: root
+  port: 3306
+  database: test
+  max_idle_connections: 10
+  max_open_connections: 100
+  max_connection_life_time: 10s
+
