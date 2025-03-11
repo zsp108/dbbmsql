@@ -16,7 +16,7 @@ var db *sql.DB
 func TestMain(m *testing.M) {
 	// 初始化数据库连接
 	ops := mysql.Options{
-		Host:                  "10.10.180.143",
+		Host:                  "10.10.140.46",
 		Username:              "root@mysqlt1",
 		Password:              "baAA11__",
 		Port:                  2881,
