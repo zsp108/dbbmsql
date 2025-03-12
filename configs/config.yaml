@@ -1,6 +1,7 @@
 general:
-  logdir: /root/workspace/github/dbbmsql/logs
-  loglevel: debug
+  logoutput: stdout
+  loglevel: ERROR
+  logtype: text
 mysql:
   host: 127.0.0.1
   username: root

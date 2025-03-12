@@ -30,28 +30,33 @@ func getConfByPath(confPath string) (*options.Options, error) {
 	return &opts, nil
 }
 
-func getConfByFlags(flags *flags.FlagStruct) (*options.Options, error) {
+func GetConfByFlags(flags *flags.FlagStruct) (*options.Options, error) {
 	// 通过命令行参数获取配置存入 Options 结构体中
 	opts.MySQLOptions.Host = flags.HostFlag
 	opts.MySQLOptions.Username = flags.UserFlag
 	opts.MySQLOptions.Password = flags.PwdFlag
 	opts.MySQLOptions.Port = flags.PortFlag
 	opts.MySQLOptions.Database = flags.DBFlag
+	opts.GeneralOptions = *options.NewLoggerOptions()
+	opts.MySQLOptions = *options.NewMYSQLOptions()
 	return &opts, nil
 }
 
-func Ztest() {
-	fmt.Println("test")
+func NewConfigs() *options.Options {
+
 	flages, err := flags.GetFlages()
 	if err != nil {
 		fmt.Println(err)
-		return
+		return nil
 	}
-	fmt.Println(flages.CnfigFlag)
-	opts, err := getConfByPath(flages.CnfigFlag)
-	if err != nil {
-		fmt.Println(err)
-		return
+	var opts *options.Options
+	if flages.CnfigFlag != "" {
+		opts, err = getConfByPath(flages.CnfigFlag)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
 	}
-	fmt.Println(opts.MySQLOptions.Host)
+	// log.Error("This is an error message")
+	return opts
 }
